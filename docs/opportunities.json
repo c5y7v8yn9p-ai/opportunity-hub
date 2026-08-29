@@ -1,37 +1,7 @@
 {
-  "generated_at": "2026-08-29T19:20:10.891214+00:00",
+  "generated_at": "2026-08-29T19:26:12.814150+00:00",
   "count": 15,
   "opportunities": [
-    {
-      "source": "Hacker News",
-      "title": "Show HN: Palmier Pro \u2013 Open-source macOS video editor built for AI",
-      "text": "Hi HN, we are Marcos and Harrison, cofounders of Palmier (https://palmier.io). We are building Palmier Pro, an open source macOS video editor, with built-in AI generation and a local MCP server that connects to your agent. Here are a few demos:- Making some AI transitions: https:",
-      "engagement": 232,
-      "url": "https://news.ycombinator.com/item?id=49022911",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Trading / Import-Export"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Show HN: OzBrain, a shared brain for knowledge between agents and your team",
-      "text": "I think agent-first chat interfaces will be a primary software modality and busy dashboard/UI will go away. I\u2019m not sure who exactly wins it, but I want my knowledge to grow/go with me.A lot of the \u201cknowledge\u201d ie research, analysis, reasoning will be done by agents as the primary",
-      "engagement": 151,
-      "url": "https://news.ycombinator.com/item?id=49394827",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Trading / Import-Export"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Show HN: 1667, a terminal UI for writing fiction with language models",
-      "text": "Hi HN. I built 1667 for my own fiction work and now use it each day. This probably has a limited audience. Maybe an audience of one...Why a terminal interface for story writing? I'm a dev. I like to use terminals for a lot of stuff. Most WebUIs feel off to me. That's the only  re",
-      "engagement": 131,
-      "url": "https://news.ycombinator.com/item?id=49330604",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Trading / Import-Export"
-    },
     {
       "source": "Hacker News",
       "title": "Ask HN: Do you have an unusual income source",
@@ -48,16 +18,6 @@
       "text": "I run a supply role at a company during the day and I'm building a B2B tool on the side. The problem I keep running into \u2014 both at work and in my family's business \u2014 is that chasing overdue invoices is manual, awkward, and nobody has a good system for it.Most small businesses I'v",
       "engagement": 89,
       "url": "https://news.ycombinator.com/item?id=47638685",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Trading / Import-Export"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Launch HN: Risklytics (YC S26) \u2013 Insurance brokerage for frontier tech companies",
-      "text": "Hi HN, we're Sam and Alex, founders of Risklytics (https://risklytics.ai). We're both on leave from Harvard, and we run an insurance brokerage for companies building robots, drones, autonomous systems and satellites. You describe your machine, we find the insurance companies will",
-      "engagement": 78,
-      "url": "https://news.ycombinator.com/item?id=49451495",
       "location": null,
       "money_mentioned": null,
       "type": "Tech / Software"
@@ -78,16 +38,6 @@
       "text": "Title says it all. I\u2019m currently at 2.5 YOE at big tech making 250k. I love my work life balance and get to work on a lot of different side hustles.Recently, I was offered the founding engineer (#1 employee) at a vertical SAAS company in the food industry. The comp is 160k for 3%",
       "engagement": 26,
       "url": "https://news.ycombinator.com/item?id=48588920",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Tech / Software"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Show HN: Microphone \u2013 Talk out your side-project ideas, then test them with ads",
-      "text": "If you are an aspiring founder, any VC will ask you this question: \u201cwhy are you the only person who could solve this\u201d. If you want to generate passive income with your side idea, get ready to enter a crowded market as everyone and their mother is shipping. Unless\nyou have an acti",
-      "engagement": 24,
-      "url": "https://news.ycombinator.com/item?id=48900788",
       "location": null,
       "money_mentioned": null,
       "type": "Tech / Software"
@@ -124,16 +74,6 @@
     },
     {
       "source": "Hacker News",
-      "title": "Show HN: mcp-use v2 rebuilt from scratch for stateless 2026-07-28 MCP spec",
-      "text": "Hi HN, Luigi here. \nWe maintain mcp-use an open-source TypeScript framework for building MCP servers and MCP Apps: https://github.com/mcp-use/mcp-use\nMCP is now (finally) stateless so we rewrote mcp-use v2 from scratch for the 2026-07-28 MCP spec revision: https://blog.modelconte",
-      "engagement": 11,
-      "url": "https://news.ycombinator.com/item?id=49198472",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Trading / Import-Export"
-    },
-    {
-      "source": "Hacker News",
       "title": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
       "text": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
       "engagement": 8,
@@ -151,6 +91,66 @@
       "location": null,
       "money_mentioned": null,
       "type": "E-commerce / Reselling"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Ask HN: How to get started with a sustainable bootstrapped business of your own?",
+      "text": "Experienced Software Engineer working in Big Tech since the past decade. I'm at a point in my life where I'm feeling pretty done with a daily 9-5 job especially because of the overwhelming demands and random priority changes that expect you work beyond scheduled hours.I could do ",
+      "engagement": 7,
+      "url": "https://news.ycombinator.com/item?id=49010676",
+      "location": null,
+      "money_mentioned": null,
+      "type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "I built a bookkeeping app for UK sole traders as a new developer using AI",
+      "text": "About a month ago I started building QuarterPerfect \u2014 a bookkeeping tool aimed at UK sole traders and landlords, specifically designed around the MTD ITSA changes coming into effect this year (first quarterly deadline: 7 August).A bit of background on me firstly.I'm not a senior ",
+      "engagement": 7,
+      "url": "https://news.ycombinator.com/item?id=48527480",
+      "location": null,
+      "money_mentioned": null,
+      "type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Side hustle ideas that work",
+      "text": "Side hustle ideas that work",
+      "engagement": 4,
+      "url": "https://news.ycombinator.com/item?id=48435334",
+      "location": null,
+      "money_mentioned": null,
+      "type": "General"
+    },
+    {
+      "source": "Hacker News",
+      "title": "$2B Conflict: Sam Altman \"Side Hustles\" Are Now Center of a Legal Warzone",
+      "text": "$2B Conflict: Sam Altman \"Side Hustles\" Are Now Center of a Legal Warzone",
+      "engagement": 3,
+      "url": "https://news.ycombinator.com/item?id=48157648",
+      "location": null,
+      "money_mentioned": "$2",
+      "type": "General"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Ask HN: We have company runway but not founder time. When do you go full-time?",
+      "text": "Three first-time founders in Canada, all of us between 45 and 55: business/product, marketing, and me on the technical side. We're building an AI tool for creative work. About thirty testers have been on a pre-production build for a couple of months. Feedback is good, and importa",
+      "engagement": 3,
+      "url": "https://news.ycombinator.com/item?id=49367763",
+      "location": null,
+      "money_mentioned": "$25",
+      "type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Side Hustles",
+      "text": "Side Hustles",
+      "engagement": 2,
+      "url": "https://news.ycombinator.com/item?id=48480435",
+      "location": null,
+      "money_mentioned": null,
+      "type": "General"
     }
   ]
 }
