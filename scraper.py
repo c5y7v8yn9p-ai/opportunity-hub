@@ -65,7 +65,12 @@ def extract_details(text):
     if money:
         details["money_mentioned"] = money[0]
     lower = text.lower()
-    if "import" in lower or "export" in lower:
+    trade_phrases = [
+        "import business", "export business", "importing goods",
+        "exporting goods", "import-export", "trading business",
+        "wholesale import", "wholesale export",
+    ]
+    if any(p in lower for p in trade_phrases):
         details["type"] = "Trading / Import-Export"
     elif "app" in lower or "software" in lower or "saas" in lower:
         details["type"] = "Tech / Software"
@@ -94,6 +99,10 @@ def fetch_hn():
             for hit in r.json().get("hits", []):
                 title = html_lib.unescape(re.sub("<[^<]+?>", "", hit.get("title") or ""))
                 text = html_lib.unescape(re.sub("<[^<]+?>", "", hit.get("story_text") or ""))
+                # "Show HN:" / "Launch HN:" are product launches, not
+                # replicable side-hustle stories -- skip them.
+                if title.lower().startswith(("show hn:", "launch hn:")):
+                    continue
                 combined = f"{title}. {text}"
                 if score_signal(combined) == 0:
                     continue
