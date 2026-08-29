@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Post an Opportunity</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="tagline">Share a real opportunity with the community</div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="container narrow">
+    <div class="box-title">Post an Opportunity</div>
+
+    <div id="login-gate" class="form-box" style="display:none; text-align:center;">
+      You need an account to post. <a href="auth.html?redirect=post.html">Log in or sign up</a>.
+    </div>
+
+    <form id="post-form" class="form-box" style="display:none;">
+      <div class="form-row">
+        <label>Title</label>
+        <input type="text" id="title" maxlength="120" placeholder="e.g. Reselling refurbished phones in Lagos" required>
+      </div>
+      <div class="form-row">
+        <label>Details</label>
+        <textarea id="body" maxlength="600" placeholder="What's the opportunity? How does it work? What did it earn?" required></textarea>
+      </div>
+      <div class="form-row">
+        <label>Type</label>
+        <select id="opp_type">
+          <option>General</option>
+          <option>Trading / Import-Export</option>
+          <option>Tech / Software</option>
+          <option>E-commerce / Reselling</option>
+          <option>Service / Freelance</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Location (optional)</label>
+        <input type="text" id="location" maxlength="60" placeholder="e.g. Nairobi, Kenya">
+      </div>
+      <div class="form-row">
+        <label>Money mentioned (optional)</label>
+        <input type="text" id="money_mentioned" maxlength="40" placeholder="e.g. $500/mo">
+      </div>
+      <div class="form-row">
+        <label>Link (optional)</label>
+        <input type="url" id="url" placeholder="https://...">
+      </div>
+      <button type="submit" class="btn-primary" id="submit-btn" style="width:100%;">Post Opportunity</button>
+      <div class="form-msg" id="form-msg"></div>
+    </form>
+  </div>
+
+  <footer>USER POSTINGS ARE PUBLIC AND SHOWN ALONGSIDE THE AUTO-SCRAPED FEED</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    renderNav("post");
+
+    (async function gate() {
+      if (!window.OH_CONFIGURED) {
+        document.getElementById("login-gate").style.display = "block";
+        document.getElementById("login-gate").textContent = "Supabase isn't configured yet — see SETUP_GUIDE.md.";
+        return;
+      }
+      const user = await Auth.getUser();
+      if (!user) {
+        document.getElementById("login-gate").style.display = "block";
+        return;
+      }
+      document.getElementById("post-form").style.display = "block";
+
+      document.getElementById("post-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById("submit-btn");
+        const formMsg = document.getElementById("form-msg");
+        formMsg.className = "form-msg";
+        formMsg.textContent = "";
+        submitBtn.disabled = true;
+
+        const row = {
+          source_type: "user",
+          source: "User Posting",
+          title: document.getElementById("title").value.trim(),
+          body: document.getElementById("body").value.trim(),
+          opp_type: document.getElementById("opp_type").value,
+          location: document.getElementById("location").value.trim(),
+          money_mentioned: document.getElementById("money_mentioned").value.trim(),
+          url: document.getElementById("url").value.trim() || null,
+          posted_by: user.id,
+        };
+
+        try {
+          const { error } = await window.sb.from("opportunities").insert(row);
+          if (error) throw error;
+          formMsg.className = "form-msg ok";
+          formMsg.textContent = "Posted! Redirecting to the feed...";
+          setTimeout(() => (window.location.href = "index.html"), 900);
+        } catch (err) {
+          formMsg.className = "form-msg err";
+          formMsg.textContent = err.message || "Could not post — try again.";
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

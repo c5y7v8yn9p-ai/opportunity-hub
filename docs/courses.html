@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Courses</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="tagline">Courses from people who've actually done it</div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="container">
+    <div class="box-title">Sell a Course</div>
+    <div id="login-gate" class="form-box" style="display:none; text-align:center;">
+      <a href="auth.html?redirect=courses.html">Log in or sign up</a> to publish a course.
+    </div>
+    <form id="course-form" class="form-box" style="display:none;">
+      <div class="form-row">
+        <label>Title</label>
+        <input type="text" id="c-title" maxlength="120" required placeholder="e.g. How I built a ₹40k/mo reselling business">
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <textarea id="c-desc" maxlength="500" required placeholder="What's covered, who it's for"></textarea>
+      </div>
+      <div class="form-row">
+        <label>Price (₹, one-time)</label>
+        <input type="number" id="c-price" min="0" step="1" required placeholder="e.g. 499">
+      </div>
+      <div class="form-row">
+        <label>Razorpay Payment Link</label>
+        <input type="url" id="c-link" required placeholder="https://rzp.io/l/...">
+        <div style="font-size:0.68rem; opacity:0.6; margin-top:0.3rem;">
+          Create one free in your Razorpay dashboard: Payment Links -> New. See SETUP_GUIDE.md.
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="c-submit" style="width:100%;">Publish Course</button>
+      <div class="form-msg" id="c-msg"></div>
+    </form>
+
+    <div class="box-title">Available Courses</div>
+    <div id="courses-grid" class="opp-grid"><div class="loading">loading courses...</div></div>
+  </div>
+
+  <footer>PAYMENTS ARE HANDLED ENTIRELY BY RAZORPAY — OPPORTUNITYHUB NEVER TOUCHES YOUR CARD DATA</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    renderNav("courses");
+
+    (async function init() {
+      if (!window.OH_CONFIGURED) {
+        document.getElementById("courses-grid").innerHTML =
+          '<div class="empty">Supabase isn\'t configured yet — see SETUP_GUIDE.md.</div>';
+        return;
+      }
+
+      const me = await Auth.getUser();
+      if (me) {
+        document.getElementById("course-form").style.display = "block";
+      } else {
+        document.getElementById("login-gate").style.display = "block";
+      }
+
+      document.getElementById("course-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("c-submit");
+        const msg = document.getElementById("c-msg");
+        btn.disabled = true;
+        try {
+          const { error } = await window.sb.from("courses").insert({
+            creator_id: me.id,
+            title: document.getElementById("c-title").value.trim(),
+            description: document.getElementById("c-desc").value.trim(),
+            price_inr: Number(document.getElementById("c-price").value),
+            payment_link: document.getElementById("c-link").value.trim(),
+          });
+          if (error) throw error;
+          msg.className = "form-msg ok";
+          msg.textContent = "Course published.";
+          document.getElementById("course-form").reset();
+          loadCourses();
+        } catch (err) {
+          msg.className = "form-msg err";
+          msg.textContent = err.message || "Could not publish course.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      async function loadCourses() {
+        const grid = document.getElementById("courses-grid");
+        const { data, error } = await window.sb
+          .from("courses")
+          .select("*, profiles:creator_id ( username, id )")
+          .order("created_at", { ascending: false });
+        if (error) {
+          grid.innerHTML = `<div class="empty">could not load courses (${escapeHtml(error.message)})</div>`;
+          return;
+        }
+        if (!data || data.length === 0) {
+          grid.innerHTML = '<div class="empty">no courses published yet</div>';
+          return;
+        }
+        grid.innerHTML = data
+          .map(
+            (c) => `<div class="opp-card">
+              <div class="card-title">${escapeHtml(c.title)}</div>
+              <div class="card-text">${escapeHtml(c.description)}</div>
+              <div class="card-meta">
+                <span class="tag">₹${escapeHtml(String(c.price_inr))}</span>
+                ${c.profiles ? `<span class="tag">by ${escapeHtml(c.profiles.username)}</span>` : ""}
+              </div>
+              <a class="btn-primary" style="width:100%; text-align:center; box-sizing:border-box;" href="${c.payment_link}" target="_blank" rel="noopener">[ Buy — ₹${escapeHtml(String(c.price_inr))} ]</a>
+            </div>`
+          )
+          .join("");
+      }
+      loadCourses();
+    })();
+  </script>
+</body>
+</html>

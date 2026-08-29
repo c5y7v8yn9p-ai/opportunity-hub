@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Log In</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="tagline">Real side-hustle signals // pulled fresh every morning</div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="container narrow">
+    <div class="box-title" id="mode-title">Log In</div>
+    <div class="form-box">
+      <div class="form-row">
+        <label>Email</label>
+        <input type="email" id="email" autocomplete="email" placeholder="you@example.com">
+      </div>
+      <div class="form-row" id="username-row" style="display:none;">
+        <label>Username</label>
+        <input type="text" id="username" autocomplete="username" placeholder="how others see you">
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" id="submit-btn" style="width:100%;">Log In</button>
+      <div class="form-msg" id="form-msg"></div>
+      <div style="text-align:center; margin-top:1rem; font-size:0.78rem;">
+        <span id="toggle-text">New here?</span>
+        <a href="#" id="toggle-mode" class="link-btn" style="display:inline-block; text-decoration:none; border:1px solid #00ff00; padding:0.2rem 0.5rem; margin-left:0.4rem;">Create an account</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>OPPORTUNITYHUB — ACCOUNTS SECURED BY SUPABASE AUTH</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    renderNav(null);
+
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect") || "index.html";
+
+    let mode = "login"; // or "signup"
+    const modeTitle = document.getElementById("mode-title");
+    const usernameRow = document.getElementById("username-row");
+    const submitBtn = document.getElementById("submit-btn");
+    const toggleText = document.getElementById("toggle-text");
+    const toggleMode = document.getElementById("toggle-mode");
+    const formMsg = document.getElementById("form-msg");
+
+    toggleMode.addEventListener("click", (e) => {
+      e.preventDefault();
+      mode = mode === "login" ? "signup" : "login";
+      const isSignup = mode === "signup";
+      modeTitle.textContent = isSignup ? "Create Account" : "Log In";
+      usernameRow.style.display = isSignup ? "block" : "none";
+      submitBtn.textContent = isSignup ? "Sign Up" : "Log In";
+      toggleText.textContent = isSignup ? "Already have an account?" : "New here?";
+      toggleMode.textContent = isSignup ? "Log in instead" : "Create an account";
+      formMsg.textContent = "";
+    });
+
+    submitBtn.addEventListener("click", async () => {
+      formMsg.className = "form-msg";
+      formMsg.textContent = "";
+
+      if (!window.OH_CONFIGURED) {
+        formMsg.className = "form-msg err";
+        formMsg.textContent = "Supabase isn't configured yet — see SETUP_GUIDE.md.";
+        return;
+      }
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const username = document.getElementById("username").value.trim();
+
+      if (!email || !password) {
+        formMsg.className = "form-msg err";
+        formMsg.textContent = "Email and password are required.";
+        return;
+      }
+      if (mode === "signup" && !username) {
+        formMsg.className = "form-msg err";
+        formMsg.textContent = "Pick a username.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      try {
+        if (mode === "signup") {
+          await Auth.signUp(email, password, username);
+          formMsg.className = "form-msg ok";
+          formMsg.textContent = "Account created. Check your email to confirm, then log in.";
+          submitBtn.disabled = false;
+        } else {
+          await Auth.signIn(email, password);
+          window.location.href = redirect;
+        }
+      } catch (err) {
+        formMsg.className = "form-msg err";
+        formMsg.textContent = err.message || "Something went wrong.";
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

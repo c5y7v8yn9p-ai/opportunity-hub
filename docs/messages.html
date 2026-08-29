@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Messages</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="tagline">Direct messages</div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="container">
+    <div id="login-gate" class="form-box" style="display:none; text-align:center;">
+      You need an account to message people. <a href="auth.html?redirect=messages.html">Log in or sign up</a>.
+    </div>
+
+    <div id="msg-app" style="display:none;">
+      <div class="box-title">Messages</div>
+      <div class="msg-layout">
+        <div class="msg-threads" id="thread-list"><div class="loading">loading...</div></div>
+        <div class="msg-panel">
+          <div class="msg-bubbles" id="bubbles"><div class="empty">select a conversation</div></div>
+          <div class="msg-compose">
+            <textarea id="compose-text" placeholder="type a message..." disabled></textarea>
+            <button class="btn-primary" id="send-btn" disabled>Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>MESSAGES ARE PRIVATE — ONLY YOU AND THE RECIPIENT CAN READ THEM</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    renderNav("messages");
+
+    let me = null;
+    let threads = {};   // partnerId -> { username, messages: [], unread: n }
+    let activePartner = null;
+
+    async function loadThreads() {
+      const { data, error } = await window.sb
+        .from("messages")
+        .select("*")
+        .or(`sender_id.eq.${me.id},recipient_id.eq.${me.id}`)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+
+      threads = {};
+      const partnerIds = new Set();
+      (data || []).forEach((m) => {
+        const partnerId = m.sender_id === me.id ? m.recipient_id : m.sender_id;
+        partnerIds.add(partnerId);
+        if (!threads[partnerId]) threads[partnerId] = { username: partnerId, messages: [], unread: 0 };
+        threads[partnerId].messages.push(m);
+        if (m.recipient_id === me.id && !m.read) threads[partnerId].unread++;
+      });
+
+      if (partnerIds.size > 0) {
+        const { data: profs } = await window.sb
+          .from("profiles")
+          .select("id, username")
+          .in("id", Array.from(partnerIds));
+        (profs || []).forEach((p) => {
+          if (threads[p.id]) threads[p.id].username = p.username;
+        });
+      }
+    }
+
+    function renderThreadList() {
+      const list = document.getElementById("thread-list");
+      const ids = Object.keys(threads).sort((a, b) => {
+        const la = threads[a].messages[threads[a].messages.length - 1];
+        const lb = threads[b].messages[threads[b].messages.length - 1];
+        return new Date(lb.created_at) - new Date(la.created_at);
+      });
+      if (ids.length === 0) {
+        list.innerHTML = '<div class="empty">no conversations yet</div>';
+        return;
+      }
+      list.innerHTML = ids
+        .map((id) => {
+          const t = threads[id];
+          const last = t.messages[t.messages.length - 1];
+          return `<div class="msg-thread-item ${id === activePartner ? "active" : ""}" data-id="${id}">
+            ${t.unread > 0 ? '<span class="unread"></span>' : ""}${escapeHtml(t.username)}
+            <div style="opacity:0.6; font-size:0.7rem; margin-top:0.2rem;">${escapeHtml((last.body || "").slice(0, 40))}</div>
+          </div>`;
+        })
+        .join("");
+      list.querySelectorAll(".msg-thread-item").forEach((el) => {
+        el.addEventListener("click", () => openThread(el.dataset.id));
+      });
+    }
+
+    async function openThread(partnerId) {
+      activePartner = partnerId;
+      renderThreadList();
+      renderBubbles();
+      document.getElementById("compose-text").disabled = false;
+      document.getElementById("send-btn").disabled = false;
+
+      const unreadIds = threads[partnerId].messages
+        .filter((m) => m.recipient_id === me.id && !m.read)
+        .map((m) => m.id);
+      if (unreadIds.length > 0) {
+        await window.sb.from("messages").update({ read: true }).in("id", unreadIds);
+        threads[partnerId].messages.forEach((m) => {
+          if (unreadIds.includes(m.id)) m.read = true;
+        });
+        threads[partnerId].unread = 0;
+        renderThreadList();
+      }
+    }
+
+    function renderBubbles() {
+      const box = document.getElementById("bubbles");
+      const t = threads[activePartner];
+      if (!t) {
+        box.innerHTML = '<div class="empty">select a conversation</div>';
+        return;
+      }
+      box.innerHTML = t.messages
+        .map(
+          (m) => `<div class="msg-bubble ${m.sender_id === me.id ? "mine" : ""}">
+            ${escapeHtml(m.body)}
+            <div class="meta">${timeAgo(m.created_at)}</div>
+          </div>`
+        )
+        .join("");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const text = document.getElementById("compose-text").value.trim();
+      if (!text || !activePartner) return;
+      const sendBtn = document.getElementById("send-btn");
+      sendBtn.disabled = true;
+      try {
+        const { data, error } = await window.sb
+          .from("messages")
+          .insert({ sender_id: me.id, recipient_id: activePartner, body: text })
+          .select()
+          .single();
+        if (error) throw error;
+        if (!threads[activePartner]) threads[activePartner] = { username: activePartner, messages: [], unread: 0 };
+        threads[activePartner].messages.push(data);
+        document.getElementById("compose-text").value = "";
+        renderThreadList();
+        renderBubbles();
+      } catch (err) {
+        alert(err.message || "Could not send message.");
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    (async function init() {
+      if (!window.OH_CONFIGURED) {
+        document.getElementById("login-gate").style.display = "block";
+        document.getElementById("login-gate").textContent = "Supabase isn't configured yet — see SETUP_GUIDE.md.";
+        return;
+      }
+      me = await Auth.getUser();
+      if (!me) {
+        document.getElementById("login-gate").style.display = "block";
+        return;
+      }
+      document.getElementById("msg-app").style.display = "block";
+
+      await loadThreads();
+      renderThreadList();
+
+      const params = new URLSearchParams(window.location.search);
+      const startWith = params.get("to");
+      if (startWith && startWith !== me.id) {
+        if (!threads[startWith]) {
+          const { data: prof } = await window.sb.from("profiles").select("username").eq("id", startWith).maybeSingle();
+          threads[startWith] = { username: prof ? prof.username : startWith, messages: [], unread: 0 };
+        }
+        openThread(startWith);
+      }
+
+      document.getElementById("send-btn").addEventListener("click", sendMessage);
+      document.getElementById("compose-text").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // live updates: new messages involving me
+      window.sb
+        .channel("messages-" + me.id)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages", filter: `recipient_id=eq.${me.id}` },
+          async (payload) => {
+            const m = payload.new;
+            const partnerId = m.sender_id;
+            if (!threads[partnerId]) {
+              const { data: prof } = await window.sb.from("profiles").select("username").eq("id", partnerId).maybeSingle();
+              threads[partnerId] = { username: prof ? prof.username : partnerId, messages: [], unread: 0 };
+            }
+            threads[partnerId].messages.push(m);
+            if (partnerId !== activePartner) threads[partnerId].unread++;
+            renderThreadList();
+            if (partnerId === activePartner) renderBubbles();
+          }
+        )
+        .subscribe();
+    })();
+  </script>
+</body>
+</html>
