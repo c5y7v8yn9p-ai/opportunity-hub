@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import json
+import html as html_lib
 from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
@@ -89,8 +90,8 @@ def fetch_hn():
             )
             r.raise_for_status()
             for hit in r.json().get("hits", []):
-                title = hit.get("title") or ""
-                text = hit.get("story_text") or ""
+                title = html_lib.unescape(re.sub("<[^<]+?>", "", hit.get("title") or ""))
+                text = html_lib.unescape(re.sub("<[^<]+?>", "", hit.get("story_text") or ""))
                 combined = f"{title}. {text}"
                 if score_signal(combined) == 0:
                     continue
