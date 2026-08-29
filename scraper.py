@@ -33,9 +33,11 @@ YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "opportunities.json")
 
 SIGNAL_WORDS = [
-    "opportunity", "started", "made", "earning", "profit", "side hustle",
+    "opportunity", "earning", "profit", "side hustle",
     "import", "export", "business idea", "launched", "bootstrapped",
-    "side income", "passive income", "selling", "reseller",
+    "side income", "passive income", "reseller",
+    "side project turned into", "first customer", "no funding",
+    "solo founder", "zero to", "self-funded", "one person business",
 ]
 
 LOCATIONS = [
