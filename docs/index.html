@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Opportunities</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; background: #f5f6f8; color: #1a1a1a; }
+  .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 2.5rem 1.5rem; text-align: center; }
+  .header h1 { font-size: 1.8rem; margin-bottom: 0.4rem; }
+  .header p { opacity: 0.85; font-size: 0.95rem; }
+  .updated { font-size: 0.8rem; opacity: 0.65; margin-top: 0.6rem; }
+  .container { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+  .price-box { text-align: center; background: white; border-radius: 10px; padding: 1.2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .price { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .subscribe-btn { display: inline-block; background: #10b981; color: white; padding: 0.9rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .subscribe-btn:hover { background: #059669; }
+  .opportunity { background: white; padding: 1.3rem; margin-bottom: 1rem; border-radius: 10px; border-left: 4px solid #2d5a7b; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .opp-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.4rem; }
+  .opp-text { color: #555; font-size: 0.92rem; margin-bottom: 0.6rem; line-height: 1.4; }
+  .opp-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.78rem; }
+  .tag { background: #eef2f6; color: #2d5a7b; padding: 0.2rem 0.6rem; border-radius: 12px; }
+  .opp-link { display: inline-block; margin-top: 0.6rem; font-size: 0.85rem; color: #2d5a7b; text-decoration: none; font-weight: 600; }
+  .empty { text-align: center; color: #888; padding: 3rem 1rem; }
+  footer { text-align: center; color: #999; font-size: 0.8rem; padding: 2rem 1rem; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Daily Opportunities</h1>
+    <p>Real side-hustle signals, pulled fresh every morning from Hacker News, news RSS, and YouTube.</p>
+    <div class="updated" id="updated">Loading...</div>
+  </div>
+
+  <div class="container">
+    <div class="price-box">
+      <div class="price">Free daily list — or get the full feed + alerts for ₹10/day</div>
+      <!-- Replace this href with your Razorpay Payment Link once you create one (see SETUP_GUIDE.md) -->
+      <a class="subscribe-btn" href="PASTE_YOUR_RAZORPAY_PAYMENT_LINK_HERE" target="_blank" rel="noopener">
+        Subscribe — ₹10/day
+      </a>
+    </div>
+
+    <div id="opportunities"></div>
+  </div>
+
+  <footer>Sources: Hacker News (Algolia API), Google News RSS, YouTube Data API. Updated automatically once a day.</footer>
+
+  <script>
+    fetch('opportunities.json?_=' + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        const updatedEl = document.getElementById('updated');
+        if (data.generated_at) {
+          const d = new Date(data.generated_at);
+          updatedEl.textContent = 'Last updated: ' + d.toLocaleString();
+        }
+
+        const list = document.getElementById('opportunities');
+        if (!data.opportunities || data.opportunities.length === 0) {
+          list.innerHTML = '<div class="empty">No opportunities yet — the daily scraper hasn\'t run. See SETUP_GUIDE.md to trigger it.</div>';
+          return;
+        }
+
+        list.innerHTML = data.opportunities.map(opp => `
+          <div class="opportunity">
+            <div class="opp-title">${escapeHtml(opp.title || opp.text.slice(0, 60))}</div>
+            <div class="opp-text">${escapeHtml(opp.text || '')}</div>
+            <div class="opp-meta">
+              <span class="tag">${escapeHtml(opp.source)}</span>
+              ${opp.type ? `<span class="tag">${escapeHtml(opp.type)}</span>` : ''}
+              ${opp.location ? `<span class="tag">${escapeHtml(opp.location)}</span>` : ''}
+              ${opp.money_mentioned ? `<span class="tag">${escapeHtml(opp.money_mentioned)}</span>` : ''}
+            </div>
+            ${opp.url ? `<a class="opp-link" href="${opp.url}" target="_blank" rel="noopener">View source →</a>` : ''}
+          </div>
+        `).join('');
+      })
+      .catch(() => {
+        document.getElementById('opportunities').innerHTML =
+          '<div class="empty">Could not load opportunities.json yet. Run the scraper once (see SETUP_GUIDE.md).</div>';
+      });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
