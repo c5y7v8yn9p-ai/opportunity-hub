@@ -1,27 +1,7 @@
 {
-  "generated_at": "2026-08-29T19:10:23.882590+00:00",
+  "generated_at": "2026-08-29T19:20:10.891214+00:00",
   "count": 15,
   "opportunities": [
-    {
-      "source": "Hacker News",
-      "title": "Launch HN: ProvenMetal (YC S26) delivers circuit boards in days instead of weeks",
-      "text": "Hey HN, we\u2019re Will & Johnny from ProvenMetal (https://provenmetal.com). You send us design files or specs and we give you assembled boards domestically in days.The US produced 30% of PCBs globally in 2000, now they produce 4%. Chinese manufacturers have completely dominated this ",
-      "engagement": 393,
-      "url": "https://news.ycombinator.com/item?id=49198464",
-      "location": null,
-      "money_mentioned": "$70",
-      "type": "Tech / Software"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Ask HN: Why do corporate failures always seem to punish the wrong people?",
-      "text": "My partner was let go after 15 years working tirelessly for one of the big five. She's probably the most resilient, rewarded and liked person that has survived and fought through this part of the business in the past decade, and while I am clearly biased, all her colleagues would",
-      "engagement": 250,
-      "url": "https://news.ycombinator.com/item?id=49418675",
-      "location": null,
-      "money_mentioned": null,
-      "type": "General"
-    },
     {
       "source": "Hacker News",
       "title": "Show HN: Palmier Pro \u2013 Open-source macOS video editor built for AI",
@@ -51,26 +31,6 @@
       "location": null,
       "money_mentioned": null,
       "type": "Trading / Import-Export"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Launch HN: Stoa Markets (YC S26) \u2013 A Marketplace for GPUs and AI Servers",
-      "text": "Hi HN, we\u2019re Eren, Berat and Kaan. We\u2019re building Stoa (https://www.stoaexchange.com), a marketplace for new and used GPUs and AI servers.GPUs are the collateral in the data center buildout. Today, financing terms mostly depend on the offtaker, meaning the company that has commit",
-      "engagement": 128,
-      "url": "https://news.ycombinator.com/item?id=49246057",
-      "location": null,
-      "money_mentioned": "$200",
-      "type": "Tech / Software"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Ask HN: Entrepreneurs, how long did it take you to succeed?",
-      "text": "How long did it take? How many ideas did you go through? What made you stick to an idea vs pivot?EDIT: People keep asking about the definition of success. Success means you had a venture that was successful from your perspective. Whether that's a small business that generates eno",
-      "engagement": 126,
-      "url": "https://news.ycombinator.com/item?id=48315206",
-      "location": null,
-      "money_mentioned": null,
-      "type": "General"
     },
     {
       "source": "Hacker News",
@@ -104,10 +64,10 @@
     },
     {
       "source": "Hacker News",
-      "title": "Show HN: Proliferate- open-source, self-hostable Codex for any coding agent",
-      "text": "Hi HN- I'm Pablo, the founder of Proliferate (YC S25)!Proliferate (https://github.com/proliferate-ai/proliferate) is an open-source, self-hostable AI IDE that lets you work and automate tasks with Claude Code, Codex, OpenCode, Cursor, and Grok in one place.Here's a quick 2m demo ",
-      "engagement": 62,
-      "url": "https://news.ycombinator.com/item?id=49390739",
+      "title": "Ask HN: Should I Promote My SaaS to get first 100 Customers without budget",
+      "text": "Bootstrapped founders: how did you get your first 100 customers without spending on ads? I'm interested in tactics that actually worked in 2026, not generic marketing advice.",
+      "engagement": 28,
+      "url": "https://news.ycombinator.com/item?id=48905763",
       "location": null,
       "money_mentioned": null,
       "type": "Tech / Software"
@@ -151,6 +111,46 @@
       "location": null,
       "money_mentioned": null,
       "type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Im 14 and I want to create AI for students",
+      "text": "I\u2019ve been thinking for a long time about an idea for a SaaS site. So, here it is: \"AI Study Workspace\" (I might still change the name). A bit about myself: I started learning programming to become a backend/software engineer. There are currently so many complaints about how hard ",
+      "engagement": 11,
+      "url": "https://news.ycombinator.com/item?id=49095106",
+      "location": null,
+      "money_mentioned": null,
+      "type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Show HN: mcp-use v2 rebuilt from scratch for stateless 2026-07-28 MCP spec",
+      "text": "Hi HN, Luigi here. \nWe maintain mcp-use an open-source TypeScript framework for building MCP servers and MCP Apps: https://github.com/mcp-use/mcp-use\nMCP is now (finally) stateless so we rewrote mcp-use v2 from scratch for the 2026-07-28 MCP spec revision: https://blog.modelconte",
+      "engagement": 11,
+      "url": "https://news.ycombinator.com/item?id=49198472",
+      "location": null,
+      "money_mentioned": null,
+      "type": "Trading / Import-Export"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
+      "text": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
+      "engagement": 8,
+      "url": "https://news.ycombinator.com/item?id=48880117",
+      "location": null,
+      "money_mentioned": null,
+      "type": "General"
+    },
+    {
+      "source": "Hacker News",
+      "title": "I just sent out my first Quote as a business owner",
+      "text": "That\u2019s right. I started a business. Installing Off-Grid solar. I think I\u2019m an absolute crazy person to try this. However I\u2019m still jittery from the adrenaline rush of hitting send on that first email. Quote #Q-2026-001.Did I mark up product enough?\nDid I overcharge and come way a",
+      "engagement": 8,
+      "url": "https://news.ycombinator.com/item?id=48043362",
+      "location": null,
+      "money_mentioned": null,
+      "type": "E-commerce / Reselling"
     }
   ]
 }
