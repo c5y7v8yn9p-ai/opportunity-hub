@@ -3,13 +3,18 @@
 Daily Opportunity Scraper
 
 Pulls real, currently-being-discussed side-hustle / business-opportunity
-signals from sources that are free to use AND legal to build a paid product
-on top of:
+signals AND real job/gig board listings from sources that are free to use
+AND legal to build a paid product on top of:
 
   - Hacker News (Algolia API)   -> no key needed, no commercial restriction
   - Google News RSS (keyword)   -> public syndication feed, no key needed
   - YouTube Data API            -> free quota, needs YOUTUBE_API_KEY (optional;
                                      script still runs without it, just skips)
+  - Remotive API                -> free, public, no key needed, remote jobs
+  - Arbeitnow Job Board API     -> free, public, no key needed, job listings
+  - RemoteOK API                -> free, public, no key needed, remote jobs
+                                     (RemoteOK's API asks for a descriptive
+                                     User-Agent and attribution, both honored)
 
 Reddit and X/Twitter are deliberately NOT included: neither has a free tier
 that a paid subscription product is allowed to run on. LinkedIn, Indeed,
@@ -21,8 +26,8 @@ are used here.
 
 Where results go:
   - Inserted directly into the Supabase "opportunities" table (source_type
-    = 'scraped'), using the SERVICE ROLE key so they show up in the live
-    feed at docs/index.html alongside user-submitted postings.
+    = 'scraped'), using the SERVICE ROLE key, so they show up in the live
+    feed and map at docs/index.html alongside user-submitted postings.
   - Also written to docs/opportunities.json as a local debug/offline copy
     (the live site does NOT read this file anymore, it's just useful for
     testing the scraper without hitting Supabase).
@@ -50,6 +55,9 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 DEBUG_OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "opportunities.json")
 
+# A descriptive User-Agent, as RemoteOK's API docs ask public consumers to send.
+USER_AGENT = "OpportunityHubBot/1.0 (+https://github.com/c5y7v8yn9p-ai/opportunity-hub; daily non-commercial-scale job aggregation)"
+
 SIGNAL_WORDS = [
     "opportunity", "earning", "profit", "side hustle",
     "import", "export", "business idea", "launched", "bootstrapped",
@@ -71,6 +79,10 @@ GOOGLE_NEWS_QUERIES = [
 ]
 
 HN_QUERIES = ["side hustle", "bootstrapped", "started a business", "side income", "import export"]
+
+# Real job-board API queries — these return actual listings, not text to
+# signal-score, so unlike HN/Google News every result here is kept.
+JOB_BOARD_QUERIES = ["remote", "freelance", "part time", "entry level"]
 
 
 def extract_details(text):
@@ -99,6 +111,10 @@ def score_signal(text):
     return sum(1 for w in SIGNAL_WORDS if w in lower)
 
 
+def strip_html(raw):
+    return re.sub("<[^<]+?>", " ", raw or "").strip()
+
+
 def fetch_hn():
     items = []
     for q in HN_QUERIES:
@@ -121,6 +137,8 @@ def fetch_hn():
                     "body": (text or title)[:280],
                     "engagement": (hit.get("points") or 0) + (hit.get("num_comments") or 0),
                     "url": f"https://news.ycombinator.com/item?id={hit.get('objectID')}",
+                    "work_mode": "local",
+                    "opportunity_type": "project",
                     **extract_details(combined),
                 })
         except Exception as e:
@@ -150,6 +168,8 @@ def fetch_google_news():
                     "body": desc[:280],
                     "engagement": 0,
                     "url": link,
+                    "work_mode": "local",
+                    "opportunity_type": "project",
                     **extract_details(combined),
                 })
         except Exception as e:
@@ -187,11 +207,165 @@ def fetch_youtube():
                 "body": snippet.get("description", "")[:280],
                 "engagement": 0,
                 "url": f"https://www.youtube.com/watch?v={vid}",
+                "work_mode": "local",
+                "opportunity_type": "project",
                 **extract_details(combined),
             })
     except Exception as e:
         print(f"[YouTube] skipped: {e}", file=sys.stderr)
     return items
+
+
+def fetch_remotive():
+    """https://remotive.com/api/remote-jobs — free, public, no key required."""
+    items = []
+    try:
+        r = requests.get(
+            "https://remotive.com/api/remote-jobs",
+            params={"limit": 40},
+            headers={"User-Agent": USER_AGENT},
+            timeout=20,
+        )
+        r.raise_for_status()
+        for job in r.json().get("jobs", [])[:40]:
+            title = job.get("title") or ""
+            company = job.get("company_name") or ""
+            desc = strip_html(job.get("description") or "")[:280]
+            job_type = (job.get("job_type") or "").lower()
+            opp_type = {
+                "full_time": "full_time", "part_time": "part_time",
+                "contract": "contract", "freelance": "freelance",
+                "internship": "internship",
+            }.get(job_type, "contract")
+            items.append({
+                "source": "Remotive",
+                "title": f"{title} at {company}" if company else title,
+                "body": desc,
+                "engagement": 0,
+                "url": job.get("url") or "",
+                "location": job.get("candidate_required_location") or None,
+                "money_mentioned": job.get("salary") or None,
+                "opp_type": job.get("category") or "General",
+                "industry_guess": job.get("category") or None,
+                "work_mode": "remote",
+                "opportunity_type": opp_type,
+            })
+    except Exception as e:
+        print(f"[Remotive] skipped: {e}", file=sys.stderr)
+    return items
+
+
+def fetch_arbeitnow():
+    """https://arbeitnow.com/api/job-board-api — free, public, no key required."""
+    items = []
+    try:
+        r = requests.get(
+            "https://www.arbeitnow.com/api/job-board-api",
+            headers={"User-Agent": USER_AGENT},
+            timeout=20,
+        )
+        r.raise_for_status()
+        for job in r.json().get("data", [])[:40]:
+            title = job.get("title") or ""
+            company = job.get("company_name") or ""
+            desc = strip_html(job.get("description") or "")[:280]
+            job_types = job.get("job_types") or []
+            jt = (job_types[0] if job_types else "").lower().replace(" ", "_")
+            opp_type = jt if jt in (
+                "full_time", "part_time", "contract", "freelance", "internship",
+            ) else "contract"
+            items.append({
+                "source": "Arbeitnow",
+                "title": f"{title} at {company}" if company else title,
+                "body": desc,
+                "engagement": 0,
+                "url": job.get("url") or "",
+                "location": job.get("location") or None,
+                "money_mentioned": None,
+                "opp_type": ", ".join(job.get("tags") or []) or "General",
+                "industry_guess": (job.get("tags") or [None])[0],
+                "work_mode": "remote" if job.get("remote") else "local",
+                "opportunity_type": opp_type,
+            })
+    except Exception as e:
+        print(f"[Arbeitnow] skipped: {e}", file=sys.stderr)
+    return items
+
+
+def fetch_remoteok():
+    """https://remoteok.com/api — free, public, no key required. First array
+    element is RemoteOK's own legal/attribution notice, not a job — skipped."""
+    items = []
+    try:
+        r = requests.get(
+            "https://remoteok.com/api",
+            headers={"User-Agent": USER_AGENT},
+            timeout=20,
+        )
+        r.raise_for_status()
+        jobs = r.json()
+        for job in jobs[1:41]:
+            if not isinstance(job, dict) or not job.get("id"):
+                continue
+            title = job.get("position") or job.get("title") or ""
+            company = job.get("company") or ""
+            desc = strip_html(job.get("description") or "")[:280]
+            salary_min = job.get("salary_min")
+            salary_max = job.get("salary_max")
+            money = f"${salary_min}-${salary_max}" if salary_min and salary_max else None
+            items.append({
+                "source": "RemoteOK",
+                "title": f"{title} at {company}" if company else title,
+                "body": desc,
+                "engagement": 0,
+                "url": job.get("url") or (f"https://remoteok.com/remote-jobs/{job.get('id')}" if job.get("id") else ""),
+                "location": job.get("location") or None,
+                "money_mentioned": money,
+                "pay_min": salary_min,
+                "pay_max": salary_max,
+                "pay_currency": "USD" if (salary_min or salary_max) else None,
+                "opp_type": ", ".join((job.get("tags") or [])[:2]) or "General",
+                "industry_guess": (job.get("tags") or [None])[0],
+                "work_mode": "remote",
+                "opportunity_type": "contract",
+            })
+    except Exception as e:
+        print(f"[RemoteOK] skipped: {e}", file=sys.stderr)
+    return items
+
+
+def fetch_industry_map():
+    """Best-effort name->id lookup for the industries table, so job-board
+    listings can be tagged with a real industry_id where we can guess one."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return {}
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/industries",
+            params={"select": "id,name", "status": "eq.approved", "limit": 200},
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        return {row["name"].lower(): row["id"] for row in r.json()}
+    except Exception as e:
+        print(f"[Supabase] could not fetch industries, skipping industry tagging: {e}", file=sys.stderr)
+        return {}
+
+
+def match_industry(guess, industry_map):
+    if not guess or not industry_map:
+        return None
+    lower = guess.lower().strip()
+    if lower in industry_map:
+        return industry_map[lower]
+    for name, iid in industry_map.items():
+        if name in lower or lower in name:
+            return iid
+    return None
 
 
 def fetch_existing_scraped_urls():
@@ -215,7 +389,7 @@ def fetch_existing_scraped_urls():
         return set()
 
 
-def push_to_supabase(items):
+def push_to_supabase(items, industry_map):
     if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
         print("[Supabase] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — skipping push, "
               "wrote local JSON only. See SETUP_GUIDE.md.", file=sys.stderr)
@@ -232,6 +406,12 @@ def push_to_supabase(items):
         "url": it["url"],
         "engagement": it.get("engagement", 0),
         "posted_by": None,
+        "work_mode": it.get("work_mode", "local"),
+        "opportunity_type": it.get("opportunity_type", "gig"),
+        "pay_min": it.get("pay_min"),
+        "pay_max": it.get("pay_max"),
+        "pay_currency": it.get("pay_currency"),
+        "industry_id": match_industry(it.get("industry_guess"), industry_map),
     } for it in items]
 
     if not rows:
@@ -259,17 +439,28 @@ def main():
     all_items += fetch_hn()
     all_items += fetch_google_news()
     all_items += fetch_youtube()
+    all_items.sort(key=lambda x: x["engagement"], reverse=True)
+    signal_top = all_items[:15]
+
+    job_board_items = []
+    job_board_items += fetch_remotive()
+    job_board_items += fetch_arbeitnow()
+    job_board_items += fetch_remoteok()
+    # job-board listings ARE the opportunity, not text to signal-score, so
+    # they're capped separately rather than competing with HN/News engagement
+    job_board_top = job_board_items[:45]
+
+    combined = signal_top + job_board_top
 
     seen = set()
     deduped = []
-    for it in all_items:
+    for it in combined:
         if not it["url"] or it["url"] in seen:
             continue
         seen.add(it["url"])
         deduped.append(it)
 
-    deduped.sort(key=lambda x: x["engagement"], reverse=True)
-    top = deduped[:15]
+    top = deduped
 
     # local debug copy — the live site reads from Supabase, not this file
     os.makedirs(os.path.dirname(DEBUG_OUT_PATH), exist_ok=True)
@@ -282,9 +473,10 @@ def main():
         json.dump(payload, f, indent=2)
     print(f"Wrote {len(top)} opportunities to local debug file {DEBUG_OUT_PATH}")
 
+    industry_map = fetch_industry_map()
     existing_urls = fetch_existing_scraped_urls()
     new_items = [it for it in top if it["url"] not in existing_urls]
-    inserted = push_to_supabase(new_items)
+    inserted = push_to_supabase(new_items, industry_map)
     print(f"Inserted {inserted} new opportunities into Supabase "
           f"({len(top) - len(new_items)} already present, skipped)")
 
