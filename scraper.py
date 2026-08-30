@@ -335,6 +335,103 @@ def fetch_remoteok():
     return items
 
 
+
+def fetch_india_jobs():
+    """Pulls a wider page of Remotive + RemoteOK listings (same free, public,
+    no-key APIs used above) and keeps only the ones explicitly open to
+    candidates based in India. Kept as its own source with its own reserved
+    slots in main() so India listings don't get crowded out by the generic
+    45-item job-board cap."""
+    items = []
+    india_kw = (
+        "india", "bengaluru", "bangalore", "mumbai", "delhi", "new delhi",
+        "hyderabad", "pune", "chennai", "kolkata", "gurgaon", "gurugram",
+        "noida", "ahmedabad", "jaipur", "chandigarh", "kochi", "indore",
+    )
+
+    def is_india(loc):
+        loc = (loc or "").lower()
+        return any(kw in loc for kw in india_kw)
+
+    try:
+        r = requests.get(
+            "https://remotive.com/api/remote-jobs",
+            params={"limit": 300},
+            headers={"User-Agent": USER_AGENT},
+            timeout=25,
+        )
+        r.raise_for_status()
+        for job in r.json().get("jobs", []):
+            loc = job.get("candidate_required_location") or ""
+            if not is_india(loc):
+                continue
+            title = job.get("title") or ""
+            company = job.get("company_name") or ""
+            desc = strip_html(job.get("description") or "")[:280]
+            job_type = (job.get("job_type") or "").lower()
+            opp_type = {
+                "full_time": "full_time", "part_time": "part_time",
+                "contract": "contract", "freelance": "freelance",
+                "internship": "internship",
+            }.get(job_type, "contract")
+            items.append({
+                "source": "Remotive (India)",
+                "title": f"{title} at {company}" if company else title,
+                "body": desc,
+                "engagement": 0,
+                "url": job.get("url") or "",
+                "location": loc,
+                "money_mentioned": job.get("salary") or None,
+                "opp_type": job.get("category") or "General",
+                "industry_guess": job.get("category") or None,
+                "work_mode": "remote",
+                "opportunity_type": opp_type,
+            })
+    except Exception as e:
+        print(f"[Remotive-India] skipped: {e}", file=sys.stderr)
+
+    try:
+        r = requests.get(
+            "https://remoteok.com/api",
+            headers={"User-Agent": USER_AGENT},
+            timeout=25,
+        )
+        r.raise_for_status()
+        jobs = r.json()
+        for job in jobs[1:]:
+            if not isinstance(job, dict) or not job.get("id"):
+                continue
+            loc = job.get("location") or ""
+            if not is_india(loc):
+                continue
+            title = job.get("position") or job.get("title") or ""
+            company = job.get("company") or ""
+            desc = strip_html(job.get("description") or "")[:280]
+            salary_min = job.get("salary_min")
+            salary_max = job.get("salary_max")
+            money = f"${salary_min}-${salary_max}" if salary_min and salary_max else None
+            items.append({
+                "source": "RemoteOK (India)",
+                "title": f"{title} at {company}" if company else title,
+                "body": desc,
+                "engagement": 0,
+                "url": job.get("url") or (f"https://remoteok.com/remote-jobs/{job.get('id')}" if job.get("id") else ""),
+                "location": loc,
+                "money_mentioned": money,
+                "pay_min": salary_min,
+                "pay_max": salary_max,
+                "pay_currency": "USD" if (salary_min or salary_max) else None,
+                "opp_type": ", ".join((job.get("tags") or [])[:2]) or "General",
+                "industry_guess": (job.get("tags") or [None])[0],
+                "work_mode": "remote",
+                "opportunity_type": "contract",
+            })
+    except Exception as e:
+        print(f"[RemoteOK-India] skipped: {e}", file=sys.stderr)
+
+    return items
+
+
 VAGUE_LOCATIONS = {
     "worldwide", "remote", "global", "anywhere", "emea", "latam", "apac",
     "americas", "europe", "everywhere", "n/a", "",
@@ -574,7 +671,12 @@ def main():
     # they're capped separately rather than competing with HN/News engagement
     job_board_top = job_board_items[:45]
 
-    combined = signal_top + job_board_top
+    # India-based listings get their own reserved slots so they can't get
+    # crowded out by the generic 45-item job-board cap above.
+    india_items = fetch_india_jobs()
+    india_top = india_items[:25]
+
+    combined = signal_top + job_board_top + india_top
 
     seen = set()
     deduped = []
