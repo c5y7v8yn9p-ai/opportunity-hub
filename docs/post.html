@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Post an Opportunity</title>
-<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
@@ -23,36 +22,126 @@
     </div>
 
     <form id="post-form" class="form-box" style="display:none;">
+
+      <div class="ai-suggest-box">
+        <div class="ai-label">✨ AI Assist (optional, free)</div>
+        <div class="form-row" style="margin-bottom:0.6rem;">
+          <textarea id="ai-input" maxlength="800" placeholder="Describe the opportunity in your own words — e.g. &quot;Need someone in Lagos to help pack and ship orders 3 days a week, will pay around ₦40,000/month, no experience needed&quot;"></textarea>
+        </div>
+        <button type="button" class="btn-secondary" id="ai-fill-btn">Auto-fill fields with AI</button>
+        <div class="form-msg" id="ai-msg"></div>
+      </div>
+
       <div class="form-row">
         <label>Title</label>
         <input type="text" id="title" maxlength="120" placeholder="e.g. Reselling refurbished phones in Lagos" required>
       </div>
       <div class="form-row">
         <label>Details</label>
-        <textarea id="body" maxlength="600" placeholder="What's the opportunity? How does it work? What did it earn?" required></textarea>
+        <textarea id="body" maxlength="1000" placeholder="What's the opportunity? How does it work?" required></textarea>
+      </div>
+
+      <div class="form-row">
+        <label>Industry</label>
+        <select id="industry_id"><option value="">Select an industry…</option></select>
+        <div style="margin-top:0.45rem;font-size:0.76rem;">
+          Not listed? <a href="#" id="suggest-industry-link">Suggest a new one</a>
+        </div>
+        <div id="suggest-industry-box" style="display:none;margin-top:0.6rem;display:flex;gap:0.5rem;">
+          <input type="text" id="new-industry-name" placeholder="Industry name" style="flex:1;">
+          <button type="button" class="btn-secondary" id="suggest-industry-btn">Check &amp; Add</button>
+        </div>
+        <div class="form-msg" id="suggest-industry-msg"></div>
+      </div>
+
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+        <div>
+          <label>Opportunity type</label>
+          <select id="opportunity_type">
+            <option value="gig">Gig</option>
+            <option value="full_time">Full-time</option>
+            <option value="part_time">Part-time</option>
+            <option value="contract">Contract</option>
+            <option value="freelance">Freelance</option>
+            <option value="one_time_task">One-time task</option>
+            <option value="project">Project</option>
+            <option value="seasonal">Seasonal</option>
+            <option value="internship">Internship</option>
+            <option value="apprenticeship">Apprenticeship</option>
+            <option value="volunteer">Volunteer</option>
+            <option value="service_request">Service request</option>
+          </select>
+        </div>
+        <div>
+          <label>Work mode</label>
+          <select id="work_mode">
+            <option value="local">Local (in-person)</option>
+            <option value="remote">Remote</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="relocation">Requires relocation</option>
+            <option value="travel">Requires travel</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+        <div>
+          <label>City</label>
+          <input type="text" id="city" maxlength="60" placeholder="e.g. Nairobi">
+        </div>
+        <div>
+          <label>Country</label>
+          <input type="text" id="country" maxlength="60" placeholder="e.g. Kenya">
+        </div>
       </div>
       <div class="form-row">
-        <label>Type</label>
-        <select id="opp_type">
-          <option>General</option>
-          <option>Trading / Import-Export</option>
-          <option>Tech / Software</option>
-          <option>E-commerce / Reselling</option>
-          <option>Service / Freelance</option>
+        <button type="button" class="btn-secondary" id="locate-btn">📍 Find this on the map</button>
+        <div class="form-msg" id="locate-msg"></div>
+        <input type="hidden" id="latitude">
+        <input type="hidden" id="longitude">
+      </div>
+
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.8rem;">
+        <div>
+          <label>Pay min</label>
+          <input type="number" id="pay_min" placeholder="e.g. 20000">
+        </div>
+        <div>
+          <label>Pay max</label>
+          <input type="number" id="pay_max" placeholder="optional">
+        </div>
+        <div>
+          <label>Currency</label>
+          <input type="text" id="pay_currency" maxlength="6" value="INR">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Experience level</label>
+        <select id="experience_level">
+          <option value="any">Any</option>
+          <option value="no_experience">No experience needed</option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
         </select>
       </div>
+
       <div class="form-row">
-        <label>Location (optional)</label>
-        <input type="text" id="location" maxlength="60" placeholder="e.g. Nairobi, Kenya">
+        <label>Skills (comma-separated, optional)</label>
+        <input type="text" id="skills" placeholder="e.g. packing, basic excel, customer service">
       </div>
+
       <div class="form-row">
-        <label>Money mentioned (optional)</label>
-        <input type="text" id="money_mentioned" maxlength="40" placeholder="e.g. $500/mo">
+        <label>Availability (optional)</label>
+        <input type="text" id="availability" maxlength="120" placeholder="e.g. 3 days/week, evenings">
       </div>
+
       <div class="form-row">
         <label>Link (optional)</label>
         <input type="url" id="url" placeholder="https://...">
       </div>
+
       <button type="submit" class="btn-primary" id="submit-btn" style="width:100%;">Post Opportunity</button>
       <div class="form-msg" id="form-msg"></div>
     </form>
@@ -66,6 +155,66 @@
   <script>
     renderNav("post");
 
+    function slugify(s) {
+      return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    }
+
+    async function callAI(mode, text) {
+      const cfg = window.OPPORTUNITY_HUB_CONFIG;
+      const res = await fetch(`${cfg.SUPABASE_URL}/functions/v1/ai-assist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: cfg.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ mode, text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) throw new Error(data.error || `AI request failed (${res.status})`);
+      return data.result;
+    }
+
+    async function geocode(query) {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
+      );
+      const data = await res.json();
+      if (data && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      return null;
+    }
+
+    function matchIndustryOption(select, guess) {
+      if (!guess) return null;
+      const lower = guess.toLowerCase().trim();
+      const opts = Array.from(select.options).filter((o) => o.value);
+      return (
+        opts.find((o) => o.textContent.toLowerCase() === lower) ||
+        opts.find((o) => o.textContent.toLowerCase().includes(lower) || lower.includes(o.textContent.toLowerCase())) ||
+        null
+      );
+    }
+
+    async function loadIndustries() {
+      const select = document.getElementById("industry_id");
+      try {
+        const { data, error } = await window.sb
+          .from("industries")
+          .select("id, name")
+          .eq("status", "approved")
+          .order("name");
+        if (error) throw error;
+        (data || []).forEach((ind) => {
+          const opt = document.createElement("option");
+          opt.value = ind.id;
+          opt.textContent = ind.name;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        // non-fatal — form still works without industry list
+      }
+    }
+
     (async function gate() {
       if (!window.OH_CONFIGURED) {
         document.getElementById("login-gate").style.display = "block";
@@ -78,7 +227,151 @@
         return;
       }
       document.getElementById("post-form").style.display = "block";
+      loadIndustries();
 
+      // ---------- AI autofill ----------
+      document.getElementById("ai-fill-btn").addEventListener("click", async () => {
+        const btn = document.getElementById("ai-fill-btn");
+        const msg = document.getElementById("ai-msg");
+        const text = document.getElementById("ai-input").value.trim();
+        if (!text) {
+          msg.className = "form-msg err";
+          msg.textContent = "Describe the opportunity above first.";
+          return;
+        }
+        btn.disabled = true;
+        msg.className = "form-msg";
+        msg.textContent = "Thinking…";
+        try {
+          const r = await callAI("structure_opportunity", text);
+          document.getElementById("title").value = r.title || "";
+          document.getElementById("body").value = r.description || text;
+          if (r.opportunity_type) document.getElementById("opportunity_type").value = r.opportunity_type;
+          if (r.work_mode) document.getElementById("work_mode").value = r.work_mode;
+          document.getElementById("pay_min").value = r.pay_min ?? "";
+          document.getElementById("pay_max").value = r.pay_max ?? "";
+          if (r.pay_currency) document.getElementById("pay_currency").value = r.pay_currency;
+          if (r.experience_level) document.getElementById("experience_level").value = r.experience_level;
+          document.getElementById("skills").value = (r.skills || []).join(", ");
+          document.getElementById("availability").value = r.availability || "";
+
+          if (r.industry_guess) {
+            const select = document.getElementById("industry_id");
+            const match = matchIndustryOption(select, r.industry_guess);
+            if (match) {
+              select.value = match.value;
+            } else {
+              document.getElementById("new-industry-name").value = r.industry_guess;
+              document.getElementById("suggest-industry-box").style.display = "flex";
+            }
+          }
+
+          msg.className = "form-msg ok";
+          msg.textContent = "Filled in — review everything below before posting.";
+        } catch (err) {
+          msg.className = "form-msg err";
+          msg.textContent = err.message || "AI request failed — you can still fill the form in manually.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // ---------- suggest new industry ----------
+      document.getElementById("suggest-industry-link").addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById("suggest-industry-box").style.display = "flex";
+      });
+
+      document.getElementById("suggest-industry-btn").addEventListener("click", async () => {
+        const btn = document.getElementById("suggest-industry-btn");
+        const msg = document.getElementById("suggest-industry-msg");
+        const nameInput = document.getElementById("new-industry-name");
+        const name = nameInput.value.trim();
+        if (!name) return;
+        btn.disabled = true;
+        msg.className = "form-msg";
+        msg.textContent = "Checking…";
+        try {
+          const select = document.getElementById("industry_id");
+          let dup = null;
+          try {
+            const r = await callAI("suggest_industry", name);
+            dup = r.duplicate_of || null;
+          } catch {
+            // AI check failing shouldn't block adding a custom industry
+          }
+          if (dup) {
+            const match = matchIndustryOption(select, dup);
+            if (match) {
+              select.value = match.value;
+              msg.className = "form-msg ok";
+              msg.textContent = `That matches an existing industry, "${dup}" — selected it for you.`;
+              return;
+            }
+          }
+          const { data: userData } = await window.sb.auth.getUser();
+          const { data, error } = await window.sb
+            .from("industries")
+            .insert({
+              name,
+              slug: slugify(name) + "-" + Math.random().toString(36).slice(2, 6),
+              is_custom: true,
+              status: "pending_review",
+              created_by: userData.user.id,
+            })
+            .select()
+            .single();
+          if (error) throw error;
+          const opt = document.createElement("option");
+          opt.value = data.id;
+          opt.textContent = data.name + " (pending review)";
+          select.appendChild(opt);
+          select.value = data.id;
+          msg.className = "form-msg ok";
+          msg.textContent = "Added — pending review, but selected for this post.";
+        } catch (err) {
+          msg.className = "form-msg err";
+          msg.textContent = err.message || "Could not add industry.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // ---------- geocode ----------
+      document.getElementById("locate-btn").addEventListener("click", async () => {
+        const btn = document.getElementById("locate-btn");
+        const msg = document.getElementById("locate-msg");
+        const city = document.getElementById("city").value.trim();
+        const country = document.getElementById("country").value.trim();
+        const query = [city, country].filter(Boolean).join(", ");
+        if (!query) {
+          msg.className = "form-msg err";
+          msg.textContent = "Enter a city and/or country first.";
+          return;
+        }
+        btn.disabled = true;
+        msg.className = "form-msg";
+        msg.textContent = "Looking up location…";
+        try {
+          const loc = await geocode(query);
+          if (!loc) {
+            msg.className = "form-msg err";
+            msg.textContent = "Couldn't find that place — you can still post without a map pin.";
+            return;
+          }
+          document.getElementById("latitude").value = loc.lat;
+          document.getElementById("longitude").value = loc.lon;
+          msg.className = "form-msg ok";
+          msg.textContent = `Found: ${query} (${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)})`;
+        } catch {
+          msg.className = "form-msg err";
+          msg.textContent = "Location lookup failed — you can still post without a map pin.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // ---------- submit ----------
       document.getElementById("post-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const submitBtn = document.getElementById("submit-btn");
@@ -87,16 +380,59 @@
         formMsg.textContent = "";
         submitBtn.disabled = true;
 
+        const city = document.getElementById("city").value.trim();
+        const country = document.getElementById("country").value.trim();
+        const payMin = document.getElementById("pay_min").value;
+        const payMax = document.getElementById("pay_max").value;
+        const payCurrency = document.getElementById("pay_currency").value.trim() || "INR";
+        const skills = document
+          .getElementById("skills")
+          .value.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const industryId = document.getElementById("industry_id").value || null;
+        const industryName = industryId
+          ? document.getElementById("industry_id").selectedOptions[0].textContent.replace(" (pending review)", "")
+          : "";
+
+        // best-effort geocode if the user typed a location but never clicked "Find on map"
+        let lat = document.getElementById("latitude").value;
+        let lon = document.getElementById("longitude").value;
+        if (!lat && !lon && (city || country)) {
+          try {
+            const loc = await geocode([city, country].filter(Boolean).join(", "));
+            if (loc) {
+              lat = loc.lat;
+              lon = loc.lon;
+            }
+          } catch {
+            // fine — posts without a pin
+          }
+        }
+
         const row = {
           source_type: "user",
           source: "User Posting",
           title: document.getElementById("title").value.trim(),
           body: document.getElementById("body").value.trim(),
-          opp_type: document.getElementById("opp_type").value,
-          location: document.getElementById("location").value.trim(),
-          money_mentioned: document.getElementById("money_mentioned").value.trim(),
+          opp_type: industryName || "General",
+          location: [city, country].filter(Boolean).join(", "),
+          money_mentioned: payMin ? `${payCurrency} ${payMin}${payMax ? "-" + payMax : "+"}` : "",
           url: document.getElementById("url").value.trim() || null,
           posted_by: user.id,
+          industry_id: industryId,
+          opportunity_type: document.getElementById("opportunity_type").value,
+          work_mode: document.getElementById("work_mode").value,
+          country: country || null,
+          city: city || null,
+          latitude: lat || null,
+          longitude: lon || null,
+          pay_min: payMin ? Number(payMin) : null,
+          pay_max: payMax ? Number(payMax) : null,
+          pay_currency: payCurrency,
+          experience_level: document.getElementById("experience_level").value,
+          skills: skills,
+          availability: document.getElementById("availability").value.trim(),
         };
 
         try {
