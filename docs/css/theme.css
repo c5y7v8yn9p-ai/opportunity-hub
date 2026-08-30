@@ -132,7 +132,7 @@ a { color: #00ff00; }
 
 /* ---------- map homepage ---------- */
 .map-shell {
-  display: grid; grid-template-columns: 360px 1fr; gap: 0.6rem; min-height: 70vh;
+  display: grid; grid-template-columns: 360px 1fr; gap: 0.6rem; height: 75vh;
   margin: 0.6rem; border: 2px solid #00ff00;
 }
 .map-sidebar {
