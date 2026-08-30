@@ -142,6 +142,8 @@ a { color: #00ff00; }
 .map-sidebar-scroll { overflow-y: auto; flex: 1; padding: 0.9rem; }
 .map-pane { position: relative; background: #000; }
 #leaflet-map { position: absolute; inset: 0; }
+.leaflet-container { background: #000 !important; }
+.leaflet-tile { mix-blend-mode: normal !important; filter: none !important; }
 
 .leaflet-control-zoom a {
   background: #000 !important; color: #00ff00 !important; border: 1px solid #00ff00 !important;

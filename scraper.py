@@ -283,7 +283,7 @@ def fetch_arbeitnow():
                 "url": job.get("url") or "",
                 "location": job.get("location") or None,
                 "money_mentioned": None,
-                "opp_type": ", ".join(job.get("tags") or []) or "General",
+                "opp_type": ", ".join((job.get("tags") or [])[:2]) or "General",
                 "industry_guess": (job.get("tags") or [None])[0],
                 "work_mode": "remote" if job.get("remote") else "local",
                 "opportunity_type": opp_type,

@@ -124,7 +124,9 @@
       } else if (opp.money_mentioned) {
         tags.push(opp.money_mentioned);
       }
-      return tags;
+      // safety cap: some scraped sources stuff many SEO keywords into one
+      // field — never let a single tag pill balloon into a wall of text
+      return tags.map((t) => (t.length > 36 ? t.slice(0, 33) + "…" : t));
     }
 
     function freshness(opp) {
@@ -157,12 +159,17 @@
       if (myCapabilities.length) {
         const m = matchScore(opp);
         if (m.matched.length) {
-          matchBadge = `<div style="font-size:0.7rem;color:var(--good);font-weight:700;margin-bottom:0.3rem;">🎯 Matches your skills: ${escapeHtml(
+          matchBadge = `<div style="font-size:0.7rem;color:#00ff00;font-weight:700;margin-bottom:0.3rem;text-shadow:0 0 6px #00ff00;">🎯 Matches your skills: ${escapeHtml(
             m.matched.join(", ")
           )}</div>`;
         }
       }
       const fresh = freshness(opp);
+      const applyHref =
+        opp.source_type === "user" && opp.posted_by
+          ? `profile.html?id=${opp.posted_by}`
+          : opp.url || null;
+      const applyLabel = opp.source_type === "user" ? "view poster →" : "view / apply →";
       div.innerHTML = `
         ${matchBadge}
         <div class="mc-title">${escapeHtml(oppLabel(opp))}</div>
@@ -170,16 +177,27 @@
           ${fresh ? `<span class="tag ${fresh.cls}">${fresh.label}</span>` : ""}
           ${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
         </div>
-        <button type="button" class="report-link" data-report-id="${opp.id}">report</button>
+        <div style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center;">
+          ${
+            applyHref
+              ? `<a class="card-link" href="${applyHref}" target="${
+                  opp.source_type === "user" ? "_self" : "_blank"
+                }" rel="noopener">${applyLabel}</a>`
+              : `<span></span>`
+          }
+          <button type="button" class="report-link" data-report-id="${opp.id}">report</button>
+        </div>
       `;
       div.addEventListener("click", (e) => {
-        if (e.target.closest(".report-link")) return;
+        if (e.target.closest(".report-link") || e.target.closest(".card-link")) return;
         focusOpportunity(opp);
       });
       div.querySelector(".report-link").addEventListener("click", (e) => {
         e.stopPropagation();
         openReportModal(opp.id);
       });
+      const link = div.querySelector(".card-link");
+      if (link) link.addEventListener("click", (e) => e.stopPropagation());
       return div;
     }
 
