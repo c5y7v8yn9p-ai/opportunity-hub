@@ -229,6 +229,11 @@ a:hover { text-decoration: none; }
 }
 .form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: 2px solid var(--accent-soft-line); border-color: var(--accent); }
 .form-row textarea { resize: vertical; min-height: 90px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; }
+@media (max-width: 560px) {
+  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+}
 .form-msg { font-size: 0.78rem; margin-top: 0.7rem; min-height: 1.1em; }
 .form-msg.ok { color: var(--good); }
 .form-msg.err { color: var(--bad); }
