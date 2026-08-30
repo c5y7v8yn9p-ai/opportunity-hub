@@ -108,7 +108,6 @@
     const links = [
       { id: "feed", href: "index.html", label: "Feed" },
       { id: "post", href: "post.html", label: "Post Opportunity" },
-      { id: "courses", href: "courses.html", label: "Courses" },
       { id: "messages", href: "messages.html", label: "Messages" },
     ];
 
