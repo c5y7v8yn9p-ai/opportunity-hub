@@ -1,156 +1,156 @@
 {
-  "generated_at": "2026-08-29T19:26:12.814150+00:00",
+  "generated_at": "2026-08-30T04:57:46.329156+00:00",
   "count": 15,
   "opportunities": [
     {
       "source": "Hacker News",
+      "title": "Show HN: Palmier Pro \u2013 Open-source macOS video editor built for AI",
+      "body": "Hi HN, we are Marcos and Harrison, cofounders of Palmier (<a href=\"https:&#x2F;&#x2F;palmier.io\">https:&#x2F;&#x2F;palmier.io</a>). We are building Palmier Pro, an open source macOS video editor, with built-in AI generation and a local MCP server that connects to your agent. Here",
+      "engagement": 232,
+      "url": "https://news.ycombinator.com/item?id=49022911",
+      "location": null,
+      "money_mentioned": null,
+      "opp_type": "Trading / Import-Export"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Show HN: OzBrain, a shared brain for knowledge between agents and your team",
+      "body": "I think agent-first chat interfaces will be a primary software modality and busy dashboard&#x2F;UI will go away. I\u2019m not sure who exactly wins it, but I want my knowledge to grow&#x2F;go with me.<p>A lot of the \u201cknowledge\u201d ie research, analysis, reasoning will be done by agents a",
+      "engagement": 151,
+      "url": "https://news.ycombinator.com/item?id=49394827",
+      "location": null,
+      "money_mentioned": null,
+      "opp_type": "Trading / Import-Export"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Show HN: 1667, a terminal UI for writing fiction with language models",
+      "body": "Hi HN. I built 1667 for my own fiction work and now use it each day. This probably has a limited audience. Maybe an audience of one...<p>Why a terminal interface for story writing? I&#x27;m a dev. I like to use terminals for a lot of stuff. Most WebUIs feel off to me. That&#x27;s",
+      "engagement": 131,
+      "url": "https://news.ycombinator.com/item?id=49330604",
+      "location": null,
+      "money_mentioned": null,
+      "opp_type": "Trading / Import-Export"
+    },
+    {
+      "source": "Hacker News",
       "title": "Ask HN: Do you have an unusual income source",
-      "text": "Most of use here are wage earners. I keep hearing of people making money with interesting side hustles. Like my neighbour rents graduation gowns for the local university. I'd love to find something like that but I need inspiration.",
+      "body": "Most of use here are wage earners. I keep hearing of people making money with interesting side hustles. Like my neighbour rents graduation gowns for the local university. I&#x27;d love to find something like that but I need inspiration.",
       "engagement": 94,
       "url": "https://news.ycombinator.com/item?id=48625774",
       "location": null,
       "money_mentioned": null,
-      "type": "General"
+      "opp_type": "General"
     },
     {
       "source": "Hacker News",
       "title": "Ask HN: How do you handle clients who don't pay on time?",
-      "text": "I run a supply role at a company during the day and I'm building a B2B tool on the side. The problem I keep running into \u2014 both at work and in my family's business \u2014 is that chasing overdue invoices is manual, awkward, and nobody has a good system for it.Most small businesses I'v",
+      "body": "I run a supply role at a company during the day and I&#x27;m building a B2B tool on the side. The problem I keep running into \u2014 both at work and in my family&#x27;s business \u2014 is that chasing overdue invoices is manual, awkward, and nobody has a good system for it.<p>Most small b",
       "engagement": 89,
       "url": "https://news.ycombinator.com/item?id=47638685",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
+      "opp_type": "Trading / Import-Export"
     },
     {
       "source": "Hacker News",
-      "title": "Ask HN: Should I Promote My SaaS to get first 100 Customers without budget",
-      "text": "Bootstrapped founders: how did you get your first 100 customers without spending on ads? I'm interested in tactics that actually worked in 2026, not generic marketing advice.",
-      "engagement": 28,
-      "url": "https://news.ycombinator.com/item?id=48905763",
+      "title": "Launch HN: Risklytics (YC S26) \u2013 Insurance brokerage for frontier tech companies",
+      "body": "Hi HN, we&#x27;re Sam and Alex, founders of Risklytics (<a href=\"https:&#x2F;&#x2F;risklytics.ai\">https:&#x2F;&#x2F;risklytics.ai</a>). We&#x27;re both on leave from Harvard, and we run an insurance brokerage for companies building robots, drones, autonomous systems and satellite",
+      "engagement": 78,
+      "url": "https://news.ycombinator.com/item?id=49451495",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
+      "opp_type": "Tech / Software"
     },
     {
       "source": "Hacker News",
       "title": "Ask HN: Conflicted about founding engineer role",
-      "text": "Title says it all. I\u2019m currently at 2.5 YOE at big tech making 250k. I love my work life balance and get to work on a lot of different side hustles.Recently, I was offered the founding engineer (#1 employee) at a vertical SAAS company in the food industry. The comp is 160k for 3%",
+      "body": "Title says it all. I\u2019m currently at 2.5 YOE at big tech making 250k. I love my work life balance and get to work on a lot of different side hustles.<p>Recently, I was offered the founding engineer (#1 employee) at a vertical SAAS company in the food industry. The comp is 160k for",
       "engagement": 26,
       "url": "https://news.ycombinator.com/item?id=48588920",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
+      "opp_type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Show HN: Microphone \u2013 Talk out your side-project ideas, then test them with ads",
+      "body": "If you are an aspiring founder, any VC will ask you this question: \u201cwhy are you the only person who could solve this\u201d. If you want to generate passive income with your side idea, get ready to enter a crowded market as everyone and their mother is shipping. Unless\nyou have an acti",
+      "engagement": 24,
+      "url": "https://news.ycombinator.com/item?id=48900788",
+      "location": null,
+      "money_mentioned": null,
+      "opp_type": "Tech / Software"
     },
     {
       "source": "Hacker News",
       "title": "Ask HN: Developers\u2013How Did You Get Your First Paying Customers?",
-      "text": "I have just launched a SAAS.But I am not on any social Media, neither I like Social Media, How do I promote it, I am Totaly stuck now, I spent 1.5 years building it.Now I came to know that distribution is the main thing , and i am really bad at it as introvert, dont know how to m",
+      "body": "I have just launched a SAAS.<p>But I am not on any social Media, neither I like Social Media, How do I promote it, I am Totaly stuck now, I spent 1.5 years building it.<p>Now I came to know that distribution is the main thing , and i am really bad at it as introvert, dont know ho",
       "engagement": 23,
       "url": "https://news.ycombinator.com/item?id=49187337",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
+      "opp_type": "Tech / Software"
     },
     {
       "source": "Hacker News",
       "title": "Ask HN: Show your micro-SaaS / MRR updates (August 2026)",
-      "text": "HN is a fantastic indiehacker/solo-founder community.We, the people, love transparency, numbers, and analyzing bootstrapped businesses.What is your current (solo) project, and what is your monthly recurring revenue? Share your wins, losses, and tech stack.",
+      "body": "HN is a fantastic indiehacker&#x2F;solo-founder community.<p>We, the people, love transparency, numbers, and analyzing bootstrapped businesses.<p>What is your current (solo) project, and what is your monthly recurring revenue? Share your wins, losses, and tech stack.",
       "engagement": 22,
       "url": "https://news.ycombinator.com/item?id=49181766",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
+      "opp_type": "Tech / Software"
     },
     {
       "source": "Hacker News",
       "title": "Im 14 and I want to create AI for students",
-      "text": "I\u2019ve been thinking for a long time about an idea for a SaaS site. So, here it is: \"AI Study Workspace\" (I might still change the name). A bit about myself: I started learning programming to become a backend/software engineer. There are currently so many complaints about how hard ",
+      "body": "I\u2019ve been thinking for a long time about an idea for a SaaS site. So, here it is: &quot;AI Study Workspace&quot; (I might still change the name). A bit about myself: I started learning programming to become a backend&#x2F;software engineer. There are currently so many complaints ",
       "engagement": 11,
       "url": "https://news.ycombinator.com/item?id=49095106",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
+      "opp_type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Show HN: mcp-use v2 rebuilt from scratch for stateless 2026-07-28 MCP spec",
+      "body": "Hi HN, Luigi here. \nWe maintain mcp-use an open-source TypeScript framework for building MCP servers and MCP Apps: <a href=\"https:&#x2F;&#x2F;github.com&#x2F;mcp-use&#x2F;mcp-use\" rel=\"nofollow\">https:&#x2F;&#x2F;github.com&#x2F;mcp-use&#x2F;mcp-use</a>\nMCP is now (finally) state",
+      "engagement": 11,
+      "url": "https://news.ycombinator.com/item?id=49198472",
+      "location": null,
+      "money_mentioned": null,
+      "opp_type": "Trading / Import-Export"
     },
     {
       "source": "Hacker News",
       "title": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
-      "text": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
+      "body": "Scientists' Side Hustle? Using AI and Quantum Computing to Generate New Peptides",
       "engagement": 8,
       "url": "https://news.ycombinator.com/item?id=48880117",
       "location": null,
       "money_mentioned": null,
-      "type": "General"
+      "opp_type": "General"
     },
     {
       "source": "Hacker News",
       "title": "I just sent out my first Quote as a business owner",
-      "text": "That\u2019s right. I started a business. Installing Off-Grid solar. I think I\u2019m an absolute crazy person to try this. However I\u2019m still jittery from the adrenaline rush of hitting send on that first email. Quote #Q-2026-001.Did I mark up product enough?\nDid I overcharge and come way a",
+      "body": "That\u2019s right. I started a business. Installing Off-Grid solar. I think I\u2019m an absolute crazy person to try this. However I\u2019m still jittery from the adrenaline rush of hitting send on that first email. Quote #Q-2026-001.<p>Did I mark up product enough?\nDid I overcharge and come wa",
       "engagement": 8,
       "url": "https://news.ycombinator.com/item?id=48043362",
       "location": null,
       "money_mentioned": null,
-      "type": "E-commerce / Reselling"
+      "opp_type": "E-commerce / Reselling"
     },
     {
       "source": "Hacker News",
-      "title": "Ask HN: How to get started with a sustainable bootstrapped business of your own?",
-      "text": "Experienced Software Engineer working in Big Tech since the past decade. I'm at a point in my life where I'm feeling pretty done with a daily 9-5 job especially because of the overwhelming demands and random priority changes that expect you work beyond scheduled hours.I could do ",
-      "engagement": 7,
-      "url": "https://news.ycombinator.com/item?id=49010676",
+      "title": "Show HN: Gribble \u2013 Pixelated pixel art editor in the browser",
+      "body": "Last year I started working on this pixel art tool to make pixelated frontend components, and as it evolved I used the tool to improve the tool, and so on. And now after some time it&#x27;s a full editor with layers, frames and a public gallery running in the browser with pixelat",
+      "engagement": 8,
+      "url": "https://news.ycombinator.com/item?id=49270238",
       "location": null,
       "money_mentioned": null,
-      "type": "Tech / Software"
-    },
-    {
-      "source": "Hacker News",
-      "title": "I built a bookkeeping app for UK sole traders as a new developer using AI",
-      "text": "About a month ago I started building QuarterPerfect \u2014 a bookkeeping tool aimed at UK sole traders and landlords, specifically designed around the MTD ITSA changes coming into effect this year (first quarterly deadline: 7 August).A bit of background on me firstly.I'm not a senior ",
-      "engagement": 7,
-      "url": "https://news.ycombinator.com/item?id=48527480",
-      "location": null,
-      "money_mentioned": null,
-      "type": "Tech / Software"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Side hustle ideas that work",
-      "text": "Side hustle ideas that work",
-      "engagement": 4,
-      "url": "https://news.ycombinator.com/item?id=48435334",
-      "location": null,
-      "money_mentioned": null,
-      "type": "General"
-    },
-    {
-      "source": "Hacker News",
-      "title": "$2B Conflict: Sam Altman \"Side Hustles\" Are Now Center of a Legal Warzone",
-      "text": "$2B Conflict: Sam Altman \"Side Hustles\" Are Now Center of a Legal Warzone",
-      "engagement": 3,
-      "url": "https://news.ycombinator.com/item?id=48157648",
-      "location": null,
-      "money_mentioned": "$2",
-      "type": "General"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Ask HN: We have company runway but not founder time. When do you go full-time?",
-      "text": "Three first-time founders in Canada, all of us between 45 and 55: business/product, marketing, and me on the technical side. We're building an AI tool for creative work. About thirty testers have been on a pre-production build for a couple of months. Feedback is good, and importa",
-      "engagement": 3,
-      "url": "https://news.ycombinator.com/item?id=49367763",
-      "location": null,
-      "money_mentioned": "$25",
-      "type": "Tech / Software"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Side Hustles",
-      "text": "Side Hustles",
-      "engagement": 2,
-      "url": "https://news.ycombinator.com/item?id=48480435",
-      "location": null,
-      "money_mentioned": null,
-      "type": "General"
+      "opp_type": "Trading / Import-Export"
     }
   ]
 }
