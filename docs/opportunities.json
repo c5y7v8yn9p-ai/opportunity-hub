@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-30T03:03:36.830046+00:00",
+  "generated_at": "2026-08-30T04:40:28.261873+00:00",
   "count": 15,
   "opportunities": [
     {
@@ -58,6 +58,16 @@
       "body": "Hi HN, we&#x27;re Sam and Alex, founders of Risklytics (<a href=\"https:&#x2F;&#x2F;risklytics.ai\">https:&#x2F;&#x2F;risklytics.ai</a>). We&#x27;re both on leave from Harvard, and we run an insurance brokerage for companies building robots, drones, autonomous systems and satellite",
       "engagement": 78,
       "url": "https://news.ycombinator.com/item?id=49451495",
+      "location": null,
+      "money_mentioned": null,
+      "opp_type": "Tech / Software"
+    },
+    {
+      "source": "Hacker News",
+      "title": "Ask HN: Should I Promote My SaaS to get first 100 Customers without budget",
+      "body": "Bootstrapped founders: how did you get your first 100 customers without spending on ads? I&#x27;m interested in tactics that actually worked in 2026, not generic marketing advice.",
+      "engagement": 28,
+      "url": "https://news.ycombinator.com/item?id=48905763",
       "location": null,
       "money_mentioned": null,
       "opp_type": "Tech / Software"
@@ -141,16 +151,6 @@
       "location": null,
       "money_mentioned": null,
       "opp_type": "E-commerce / Reselling"
-    },
-    {
-      "source": "Hacker News",
-      "title": "Show HN: Gribble \u2013 Pixelated pixel art editor in the browser",
-      "body": "Last year I started working on this pixel art tool to make pixelated frontend components, and as it evolved I used the tool to improve the tool, and so on. And now after some time it&#x27;s a full editor with layers, frames and a public gallery running in the browser with pixelat",
-      "engagement": 8,
-      "url": "https://news.ycombinator.com/item?id=49270238",
-      "location": null,
-      "money_mentioned": null,
-      "opp_type": "Trading / Import-Export"
     }
   ]
 }
