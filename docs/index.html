@@ -28,6 +28,16 @@
       <div class="filter-bar">
         <input class="search-input" id="search-input" type="text" placeholder="Search opportunities, e.g. &quot;video editing&quot;">
         <div class="chip-row" id="industry-chips"><span style="font-size:0.72rem;color:var(--ink-faint);">loading industries…</span></div>
+        <div class="chip-row" id="workmode-chips">
+          <span class="chip active" data-mode="">All modes</span>
+          <span class="chip" data-mode="remote">Remote</span>
+          <span class="chip" data-mode="hybrid">Hybrid</span>
+          <span class="chip" data-mode="local">Local</span>
+        </div>
+        <select class="search-input" id="sort-select" style="margin-top:0.7rem;">
+          <option value="newest">Sort: Newest first</option>
+          <option value="match" id="match-option" style="display:none;">Sort: Best match for me</option>
+        </select>
       </div>
       <div class="results-count" id="results-count"></div>
       <div class="map-sidebar-scroll" id="opportunities">
@@ -51,7 +61,10 @@
     let map, markerLayer;
     let allOpps = [];
     let activeIndustry = null;
+    let activeWorkMode = "";
     let searchTerm = "";
+    let sortMode = "newest";
+    let myCapabilities = [];
 
     function initMap() {
       map = L.map("leaflet-map", { worldCopyJump: true }).setView([20, 10], 2);
@@ -81,12 +94,31 @@
       return tags;
     }
 
+    function matchScore(opp) {
+      const skills = Array.isArray(opp.skills) ? opp.skills : [];
+      if (!skills.length || !myCapabilities.length) return { score: 0, matched: [] };
+      const matched = skills.filter((s) =>
+        myCapabilities.some((m) => m.includes(s.toLowerCase()) || s.toLowerCase().includes(m))
+      );
+      return { score: matched.length / skills.length, matched };
+    }
+
     function renderMiniCard(opp) {
       const tags = metaTags(opp);
       const div = document.createElement("div");
       div.className = "mini-card";
       div.dataset.id = opp.id;
+      let matchBadge = "";
+      if (myCapabilities.length) {
+        const m = matchScore(opp);
+        if (m.matched.length) {
+          matchBadge = `<div style="font-size:0.7rem;color:var(--good);font-weight:700;margin-bottom:0.3rem;">🎯 Matches your skills: ${escapeHtml(
+            m.matched.join(", ")
+          )}</div>`;
+        }
+      }
       div.innerHTML = `
+        ${matchBadge}
         <div class="mc-title">${escapeHtml(oppLabel(opp))}</div>
         <div class="mc-meta">${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>
       `;
@@ -117,14 +149,21 @@
       if (activeIndustry) {
         list = list.filter((o) => o.industry_id === activeIndustry);
       }
+      if (activeWorkMode) {
+        list = list.filter((o) => o.work_mode === activeWorkMode);
+      }
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         list = list.filter(
           (o) =>
             (o.title || "").toLowerCase().includes(q) ||
             (o.body || "").toLowerCase().includes(q) ||
-            (o.city || o.location || "").toLowerCase().includes(q)
+            (o.city || o.location || "").toLowerCase().includes(q) ||
+            (Array.isArray(o.skills) ? o.skills.join(" ") : "").toLowerCase().includes(q)
         );
+      }
+      if (sortMode === "match" && myCapabilities.length) {
+        list = list.slice().sort((a, b) => matchScore(b).score - matchScore(a).score);
       }
       return list;
     }
@@ -239,14 +278,46 @@
       }
     }
 
+    async function loadMyCapabilities() {
+      if (!window.OH_CONFIGURED) return;
+      const user = await Auth.getUser();
+      if (!user) return;
+      try {
+        const { data } = await window.sb.from("capabilities").select("skill").eq("profile_id", user.id);
+        myCapabilities = (data || []).map((c) => c.skill.toLowerCase());
+        if (myCapabilities.length) {
+          document.getElementById("match-option").style.display = "";
+        }
+      } catch {
+        // no capabilities yet — matching just stays off
+      }
+    }
+
     document.getElementById("search-input").addEventListener("input", (e) => {
       searchTerm = e.target.value.trim();
       render();
     });
 
+    document.querySelectorAll("#workmode-chips .chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        activeWorkMode = chip.dataset.mode;
+        document.querySelectorAll("#workmode-chips .chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        render();
+      });
+    });
+
+    document.getElementById("sort-select").addEventListener("change", (e) => {
+      sortMode = e.target.value;
+      render();
+    });
+
     initMap();
     loadIndustries();
-    loadFeed();
+    (async function boot() {
+      await loadMyCapabilities();
+      await loadFeed();
+    })();
   </script>
 </body>
 </html>
