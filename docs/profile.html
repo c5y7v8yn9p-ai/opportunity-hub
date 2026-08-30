@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Profile</title>
-<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
@@ -30,6 +29,59 @@
       </div>
       <button class="btn-primary" id="save-profile-btn">Save</button>
       <div class="form-msg" id="edit-msg"></div>
+    </div>
+
+    <div class="box-title">Capabilities</div>
+    <div id="capabilities-list"><div class="loading">loading...</div></div>
+
+    <div id="capability-box" class="form-box" style="display:none;">
+      <div class="box-title" style="margin-top:0;">Add to Your Capabilities</div>
+
+      <div class="ai-suggest-box">
+        <div class="ai-label">✨ AI Assist (optional, free)</div>
+        <p style="font-size:0.8rem; margin-bottom:0.6rem;">
+          Describe your work experience in your own words, and AI will pull out a skill list.
+          Not sure what to write? <a href="#" id="show-questions-link">Answer a few quick questions instead</a>.
+        </p>
+
+        <div id="guiding-questions" style="display:none; margin-bottom:0.8rem;">
+          <div class="form-row">
+            <label>What have you done for work before (paid or unpaid)?</label>
+            <input type="text" id="q1" maxlength="200">
+          </div>
+          <div class="form-row">
+            <label>What do people usually ask you for help with?</label>
+            <input type="text" id="q2" maxlength="200">
+          </div>
+          <div class="form-row">
+            <label>What do you enjoy doing that others seem to find hard?</label>
+            <input type="text" id="q3" maxlength="200">
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom:0.6rem;">
+          <textarea id="cap-input" maxlength="800" placeholder="e.g. I've spent 2 years helping my family's shop with bookkeeping and Excel, and I taught myself basic video editing for Instagram reels..."></textarea>
+        </div>
+        <button type="button" class="btn-secondary" id="cap-ai-btn">Extract capabilities with AI</button>
+        <div class="form-msg" id="cap-ai-msg"></div>
+      </div>
+
+      <div class="form-row" style="display:flex; gap:0.5rem; align-items:flex-end; margin-top:1rem;">
+        <div style="flex:2;">
+          <label>Or add one manually</label>
+          <input type="text" id="manual-skill" placeholder="e.g. basic excel" maxlength="60">
+        </div>
+        <div style="flex:1;">
+          <select id="manual-proficiency">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate" selected>Intermediate</option>
+            <option value="experienced">Experienced</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+        <button type="button" class="btn-secondary" id="manual-add-btn">Add</button>
+      </div>
+      <div class="form-msg" id="manual-msg"></div>
     </div>
 
     <div id="rate-box" class="form-box" style="display:none;">
@@ -70,6 +122,76 @@
     const params = new URLSearchParams(window.location.search);
     const profileId = params.get("id");
 
+    const PROF_LABEL = { beginner: "Beginner", intermediate: "Intermediate", experienced: "Experienced", expert: "Expert" };
+
+    async function callAI(mode, text) {
+      const cfg = window.OPPORTUNITY_HUB_CONFIG;
+      const res = await fetch(`${cfg.SUPABASE_URL}/functions/v1/ai-assist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: cfg.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ mode, text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) throw new Error(data.error || `AI request failed (${res.status})`);
+      return data.result;
+    }
+
+    async function loadCapabilities(isMe) {
+      const box = document.getElementById("capabilities-list");
+      const { data, error } = await window.sb
+        .from("capabilities")
+        .select("*")
+        .eq("profile_id", profileId)
+        .order("created_at", { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        box.innerHTML = '<div class="empty">no capabilities listed yet.</div>';
+        return;
+      }
+
+      box.innerHTML = `<div class="chip-row" style="margin:0 0 0.5rem;">${data
+        .map(
+          (c) => `<span class="tag accent" data-cap-id="${c.id}">
+            ${escapeHtml(c.skill)} · ${PROF_LABEL[c.proficiency] || c.proficiency}
+            ${isMe ? ` <span class="cap-remove" data-cap-id="${c.id}" style="cursor:pointer; margin-left:0.3rem;" title="remove">✕</span>` : ""}
+          </span>`
+        )
+        .join("")}</div>`;
+
+      if (isMe) {
+        box.querySelectorAll(".cap-remove").forEach((el) => {
+          el.addEventListener("click", async () => {
+            await window.sb.from("capabilities").delete().eq("id", el.dataset.capId);
+            loadCapabilities(isMe);
+          });
+        });
+      }
+    }
+
+    async function addCapabilities(list, msgEl) {
+      const me = await Auth.getUser();
+      if (!me || !list.length) return;
+      const rows = list.map((c) => ({
+        profile_id: me.id,
+        skill: (c.skill || "").slice(0, 60),
+        proficiency: ["beginner", "intermediate", "experienced", "expert"].includes(c.proficiency) ? c.proficiency : "intermediate",
+        trust_level: "self_declared",
+      }));
+      const { error } = await window.sb.from("capabilities").upsert(rows, { onConflict: "profile_id,skill" });
+      if (error) {
+        msgEl.className = "form-msg err";
+        msgEl.textContent = error.message || "Could not save capabilities.";
+        return;
+      }
+      msgEl.className = "form-msg ok";
+      msgEl.textContent = `Added ${rows.length} capabilit${rows.length === 1 ? "y" : "ies"}.`;
+      loadCapabilities(true);
+    }
+
     (async function init() {
       if (!window.OH_CONFIGURED) {
         document.getElementById("profile-body").innerHTML =
@@ -109,6 +231,8 @@
         </div>
       `;
 
+      loadCapabilities(isMe);
+
       if (isMe) {
         document.getElementById("edit-box").style.display = "block";
         document.getElementById("edit-bio").value = profile.bio || "";
@@ -130,6 +254,55 @@
             msg.className = "form-msg err";
             msg.textContent = err.message || "Could not save.";
           }
+        });
+
+        document.getElementById("capability-box").style.display = "block";
+
+        document.getElementById("show-questions-link").addEventListener("click", (e) => {
+          e.preventDefault();
+          document.getElementById("guiding-questions").style.display = "block";
+        });
+
+        document.getElementById("cap-ai-btn").addEventListener("click", async () => {
+          const btn = document.getElementById("cap-ai-btn");
+          const msg = document.getElementById("cap-ai-msg");
+          let text = document.getElementById("cap-input").value.trim();
+          const q1 = document.getElementById("q1").value.trim();
+          const q2 = document.getElementById("q2").value.trim();
+          const q3 = document.getElementById("q3").value.trim();
+          const answers = [q1, q2, q3].filter(Boolean).join(". ");
+          const combined = [text, answers].filter(Boolean).join(". ");
+          if (!combined) {
+            msg.className = "form-msg err";
+            msg.textContent = "Write something above, or answer the quick questions, first.";
+            return;
+          }
+          btn.disabled = true;
+          msg.className = "form-msg";
+          msg.textContent = "Thinking…";
+          try {
+            const result = await callAI("extract_capabilities", combined);
+            if (!Array.isArray(result) || result.length === 0) {
+              msg.className = "form-msg err";
+              msg.textContent = "Couldn't find specific skills in that — try adding more detail, or add one manually below.";
+              return;
+            }
+            await addCapabilities(result, msg);
+          } catch (err) {
+            msg.className = "form-msg err";
+            msg.textContent = err.message || "AI request failed — try adding a skill manually below.";
+          } finally {
+            btn.disabled = false;
+          }
+        });
+
+        document.getElementById("manual-add-btn").addEventListener("click", async () => {
+          const msg = document.getElementById("manual-msg");
+          const skill = document.getElementById("manual-skill").value.trim();
+          const proficiency = document.getElementById("manual-proficiency").value;
+          if (!skill) return;
+          await addCapabilities([{ skill, proficiency }], msg);
+          document.getElementById("manual-skill").value = "";
         });
       } else if (me) {
         document.getElementById("rate-box").style.display = "block";
