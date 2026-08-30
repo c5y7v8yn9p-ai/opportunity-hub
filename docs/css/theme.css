@@ -142,6 +142,9 @@ a:hover { text-decoration: none; }
   padding: 0.2rem 0.6rem; font-size: 0.68rem; font-weight: 600;
 }
 .tag.accent { background: var(--accent-soft); color: var(--accent); }
+.tag.good { background: #dcfce7; color: var(--good); }
+.tag.warn { background: #fef3c7; color: var(--warn); }
+.tag.bad { background: #fee2e2; color: var(--bad); }
 .card-link { font-size: 0.78rem; text-decoration: none; color: var(--accent); font-weight: 600; }
 .card-link:hover { text-decoration: underline; }
 .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; font-size: 0.72rem; color: var(--ink-faint); }
@@ -185,6 +188,21 @@ a:hover { text-decoration: none; }
 .mini-card .mc-meta { font-size: 0.7rem; color: var(--ink-faint); display: flex; gap: 0.4rem; flex-wrap: wrap; }
 
 .results-count { font-size: 0.75rem; color: var(--ink-faint); padding: 0 0.9rem; margin-top: 0.6rem; }
+
+.report-link {
+  font-size: 0.68rem; color: var(--ink-faint); background: none; border: none; cursor: pointer;
+  font-family: inherit; padding: 0.1rem 0; text-decoration: underline;
+}
+.report-link:hover { color: var(--bad); }
+
+.report-modal {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 100;
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.report-modal-box {
+  background: #fff; border-radius: var(--radius-lg); padding: 1.4rem; max-width: 380px; width: 100%;
+  box-shadow: var(--shadow);
+}
 
 .leaflet-popup-content { font-family: inherit; font-size: 0.8rem; }
 .leaflet-popup-content b { display: block; margin-bottom: 0.2rem; }

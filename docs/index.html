@@ -49,6 +49,36 @@
     </div>
   </div>
 
+  <div class="report-modal" id="report-modal">
+    <div class="report-modal-box">
+      <div class="box-title" style="margin-top:0;">Report this opportunity</div>
+      <div class="form-row">
+        <label>Reason</label>
+        <select id="report-reason">
+          <option value="scam">Scam</option>
+          <option value="fake_job">Fake job</option>
+          <option value="misleading_salary">Misleading salary</option>
+          <option value="application_fee">Asks for an application fee</option>
+          <option value="illegal_activity">Illegal activity</option>
+          <option value="harassment">Harassment</option>
+          <option value="impersonation">Impersonation</option>
+          <option value="duplicate">Duplicate listing</option>
+          <option value="expired">Expired / no longer available</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Details (optional)</label>
+        <textarea id="report-details" maxlength="300"></textarea>
+      </div>
+      <div style="display:flex; gap:0.6rem;">
+        <button type="button" class="btn-primary" id="report-submit-btn" style="flex:1;">Submit report</button>
+        <button type="button" class="btn-secondary" id="report-cancel-btn">Cancel</button>
+      </div>
+      <div class="form-msg" id="report-msg"></div>
+    </div>
+  </div>
+
   <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -94,6 +124,18 @@
       return tags;
     }
 
+    function freshness(opp) {
+      if (opp.expires_at && new Date(opp.expires_at) < new Date()) {
+        return { label: "Expired", cls: "bad" };
+      }
+      const ref = opp.last_verified_at || opp.created_at;
+      if (!ref) return null;
+      const days = (Date.now() - new Date(ref).getTime()) / 86400000;
+      if (days < 3) return { label: "Fresh", cls: "good" };
+      if (days < 14) return { label: "Active", cls: "" };
+      return { label: "Aging", cls: "warn" };
+    }
+
     function matchScore(opp) {
       const skills = Array.isArray(opp.skills) ? opp.skills : [];
       if (!skills.length || !myCapabilities.length) return { score: 0, matched: [] };
@@ -117,12 +159,24 @@
           )}</div>`;
         }
       }
+      const fresh = freshness(opp);
       div.innerHTML = `
         ${matchBadge}
         <div class="mc-title">${escapeHtml(oppLabel(opp))}</div>
-        <div class="mc-meta">${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>
+        <div class="mc-meta">
+          ${fresh ? `<span class="tag ${fresh.cls}">${fresh.label}</span>` : ""}
+          ${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
+        </div>
+        <button type="button" class="report-link" data-report-id="${opp.id}">report</button>
       `;
-      div.addEventListener("click", () => focusOpportunity(opp));
+      div.addEventListener("click", (e) => {
+        if (e.target.closest(".report-link")) return;
+        focusOpportunity(opp);
+      });
+      div.querySelector(".report-link").addEventListener("click", (e) => {
+        e.stopPropagation();
+        openReportModal(opp.id);
+      });
       return div;
     }
 
@@ -310,6 +364,51 @@
     document.getElementById("sort-select").addEventListener("change", (e) => {
       sortMode = e.target.value;
       render();
+    });
+
+    let reportingOppId = null;
+
+    function openReportModal(oppId) {
+      reportingOppId = oppId;
+      document.getElementById("report-msg").textContent = "";
+      document.getElementById("report-msg").className = "form-msg";
+      document.getElementById("report-modal").style.display = "flex";
+    }
+    function closeReportModal() {
+      document.getElementById("report-modal").style.display = "none";
+    }
+
+    document.getElementById("report-cancel-btn").addEventListener("click", closeReportModal);
+    document.getElementById("report-modal").addEventListener("click", (e) => {
+      if (e.target.id === "report-modal") closeReportModal();
+    });
+
+    document.getElementById("report-submit-btn").addEventListener("click", async () => {
+      const msg = document.getElementById("report-msg");
+      if (!window.OH_CONFIGURED) return;
+      const user = await Auth.getUser();
+      if (!user) {
+        msg.className = "form-msg err";
+        msg.textContent = "Log in to report a listing.";
+        return;
+      }
+      try {
+        const { error } = await window.sb.from("reports").insert({
+          opportunity_id: reportingOppId,
+          reporter_id: user.id,
+          reason: document.getElementById("report-reason").value,
+          details: document.getElementById("report-details").value.trim(),
+        });
+        if (error) throw error;
+        msg.className = "form-msg ok";
+        msg.textContent = "Reported — thank you, we'll take a look.";
+        setTimeout(closeReportModal, 1300);
+      } catch (err) {
+        msg.className = "form-msg err";
+        msg.textContent = (err.message || "").includes("duplicate")
+          ? "You've already reported this listing."
+          : err.message || "Could not submit report.";
+      }
     });
 
     initMap();
