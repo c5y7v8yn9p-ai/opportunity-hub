@@ -44,6 +44,7 @@ import os
 import re
 import sys
 import json
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -334,6 +335,59 @@ def fetch_remoteok():
     return items
 
 
+VAGUE_LOCATIONS = {
+    "worldwide", "remote", "global", "anywhere", "emea", "latam", "apac",
+    "americas", "europe", "everywhere", "n/a", "",
+}
+
+_GEOCODE_CACHE = {}
+
+
+def geocode(location_str):
+    """Best-effort city/country + lat/lng lookup via Nominatim (OpenStreetMap's
+    free, keyless geocoder). Respects their usage policy: max 1 req/sec and a
+    descriptive User-Agent (both honored below). Results are cached per run
+    so repeated locations (e.g. many "Berlin" listings in one scrape) only
+    hit the network once."""
+    if not location_str:
+        return None
+    # skip vague multi-region strings ("Worldwide", "LATAM, Europe, USA...")
+    # that Nominatim has no hope of resolving to one point
+    first_part = location_str.split(",")[0].strip().lower()
+    if first_part in VAGUE_LOCATIONS or location_str.strip().lower() in VAGUE_LOCATIONS:
+        return None
+
+    if location_str in _GEOCODE_CACHE:
+        return _GEOCODE_CACHE[location_str]
+
+    result = None
+    try:
+        r = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"format": "json", "addressdetails": 1, "limit": 1, "q": location_str},
+            headers={"User-Agent": USER_AGENT},
+            timeout=15,
+        )
+        r.raise_for_status()
+        hits = r.json()
+        if hits:
+            hit = hits[0]
+            addr = hit.get("address", {})
+            city = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("county")
+            result = {
+                "lat": float(hit["lat"]),
+                "lon": float(hit["lon"]),
+                "city": city,
+                "country": addr.get("country"),
+            }
+    except Exception as e:
+        print(f"[Geocode] skipped '{location_str}': {e}", file=sys.stderr)
+
+    _GEOCODE_CACHE[location_str] = result
+    time.sleep(1.1)  # Nominatim usage policy: max 1 request/second
+    return result
+
+
 def fetch_industry_map():
     """Best-effort name->id lookup for the industries table, so job-board
     listings can be tagged with a real industry_id where we can guess one."""
@@ -412,6 +466,10 @@ def push_to_supabase(items, industry_map):
         "pay_max": it.get("pay_max"),
         "pay_currency": it.get("pay_currency"),
         "industry_id": match_industry(it.get("industry_guess"), industry_map),
+        "city": it.get("geo_city"),
+        "country": it.get("geo_country"),
+        "latitude": it.get("latitude"),
+        "longitude": it.get("longitude"),
     } for it in items]
 
     if not rows:
@@ -432,6 +490,72 @@ def push_to_supabase(items, industry_map):
         print(f"[Supabase] insert failed ({r.status_code}): {r.text[:500]}", file=sys.stderr)
         return 0
     return len(rows)
+
+
+def fetch_uncoded_opportunities(limit=60):
+    """Existing rows (already inserted, from before geocoding existed, or
+    from a location Nominatim couldn't previously resolve) that still have
+    no map coordinates but do have a location string worth retrying."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return []
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/opportunities",
+            params={
+                "select": "id,location",
+                "latitude": "is.null",
+                "location": "not.is.null",
+                "limit": limit,
+            },
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        return [row for row in r.json() if row.get("location") and row["location"].strip()]
+    except Exception as e:
+        print(f"[Backfill] could not fetch uncoded opportunities: {e}", file=sys.stderr)
+        return []
+
+
+def backfill_missing_coordinates(limit=60):
+    """One geocode pass over existing rows missing a map pin, so opportunities
+    posted/scraped before geocoding existed still show up on the map. Capped
+    per run (rate-limited to ~1/sec) and self-heals over a few daily runs."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return 0
+    rows = fetch_uncoded_opportunities(limit)
+    updated = 0
+    for row in rows:
+        loc = geocode(row["location"])
+        if not loc:
+            continue
+        try:
+            r = requests.patch(
+                f"{SUPABASE_URL}/rest/v1/opportunities",
+                params={"id": f"eq.{row['id']}"},
+                json={
+                    "latitude": loc["lat"],
+                    "longitude": loc["lon"],
+                    "city": loc["city"],
+                    "country": loc["country"],
+                },
+                headers={
+                    "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                },
+                timeout=20,
+            )
+            if r.ok:
+                updated += 1
+        except Exception as e:
+            print(f"[Backfill] could not update {row['id']}: {e}", file=sys.stderr)
+    print(f"[Backfill] geocoded {updated}/{len(rows)} existing opportunities that were missing coordinates")
+    return updated
 
 
 def main():
@@ -476,9 +600,27 @@ def main():
     industry_map = fetch_industry_map()
     existing_urls = fetch_existing_scraped_urls()
     new_items = [it for it in top if it["url"] not in existing_urls]
+
+    # Geocode only the genuinely new items (not the full 60+ every run) —
+    # this is what puts pins on the homepage map. Nominatim's free API is
+    # rate-limited to 1 req/sec, so this adds roughly 1 second per unique
+    # location, which is well within a GitHub Actions job's time budget.
+    geocoded = 0
+    for it in new_items:
+        loc = geocode(it.get("location"))
+        if loc:
+            it["latitude"] = loc["lat"]
+            it["longitude"] = loc["lon"]
+            it["geo_city"] = loc["city"]
+            it["geo_country"] = loc["country"]
+            geocoded += 1
+    print(f"[Geocode] resolved {geocoded}/{len(new_items)} new items to map coordinates")
+
     inserted = push_to_supabase(new_items, industry_map)
     print(f"Inserted {inserted} new opportunities into Supabase "
           f"({len(top) - len(new_items)} already present, skipped)")
+
+    backfill_missing_coordinates(limit=60)
 
 
 if __name__ == "__main__":
