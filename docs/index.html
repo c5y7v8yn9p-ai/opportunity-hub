@@ -99,9 +99,11 @@
 
     function initMap() {
       map = L.map("leaflet-map", { worldCopyJump: true }).setView([20, 10], 2);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18,
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19,
+        subdomains: "abcd",
       }).addTo(map);
       markerLayer = L.layerGroup().addTo(map);
     }
@@ -243,7 +245,7 @@
         if (opp.latitude == null || opp.longitude == null) return;
         withCoords++;
         const marker = L.circleMarker([opp.latitude, opp.longitude], {
-          radius: 7, weight: 2, color: "#2563eb", fillColor: "#2563eb", fillOpacity: 0.85,
+          radius: 7, weight: 2, color: "#00ff00", fillColor: "#00ff00", fillOpacity: 0.75,
         }).bindPopup(popupHtml(opp));
         marker._ohId = opp.id;
         marker.addTo(markerLayer);
