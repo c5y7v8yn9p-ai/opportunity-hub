@@ -99,12 +99,16 @@
 
     function initMap() {
       map = L.map("leaflet-map", { worldCopyJump: true }).setView([20, 10], 2);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19,
-        subdomains: "abcd",
-      }).addTo(map);
+      // Esri's free World_Dark_Gray_Base — no API key required, unlike
+      // CARTO's basemaps which now gate their free tier behind a key.
+      // Note the {z}/{y}/{x} order (Esri's tile scheme swaps y and x).
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        {
+          attribution: "Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+          maxZoom: 16,
+        }
+      ).addTo(map);
       markerLayer = L.layerGroup().addTo(map);
     }
 
