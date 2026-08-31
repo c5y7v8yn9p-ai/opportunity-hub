@@ -161,7 +161,13 @@ a { color: #00ff00; }
 }
 .search-input:focus { outline: 1px solid #fff; }
 
-.chip-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.7rem; }
+.chip-row {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.7rem;
+  max-height: 128px; overflow-y: auto; padding-right: 0.3rem;
+}
+.chip-row::-webkit-scrollbar, .map-sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.chip-row::-webkit-scrollbar-thumb, .map-sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(0,255,0,0.45); }
+.chip-row::-webkit-scrollbar-track, .map-sidebar-scroll::-webkit-scrollbar-track { background: rgba(0,255,0,0.05); }
 .chip {
   border: 1px solid rgba(0,255,0,0.6); background: transparent; color: #00ff00;
   padding: 0.28rem 0.65rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
