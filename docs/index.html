@@ -20,7 +20,7 @@
   <div class="container">
     <div class="paywall-box">
       <div class="price-line">Free daily feed — or unlock the full firehose for ₹10/month</div>
-      <a class="btn-primary" href="https://rzp.io/rzp/g7KSTHei" target="_blank" rel="noopener">[ Subscribe — ₹10/month ]</a>
+      <button class="btn-primary" id="subscribe-btn" onclick="startSubscription()">[ Subscribe — ₹10/month ]</button>
     </div>
   </div>
 
@@ -88,6 +88,39 @@
   <script src="js/supabase-client.js?v=2"></script>
   <script>
     renderNav("feed");
+
+    async function startSubscription() {
+      const user = await Auth.getUser();
+      if (!user) {
+        window.location.href = "auth.html?redirect=index.html";
+        return;
+      }
+      const btn = document.getElementById("subscribe-btn");
+      const original = btn.textContent;
+      btn.textContent = "connecting to razorpay...";
+      btn.disabled = true;
+      try {
+        const { data: sessionData } = await window.sb.auth.getSession();
+        const token = sessionData && sessionData.session ? sessionData.session.access_token : null;
+        if (!token) throw new Error("No active session — please log in again.");
+        const cfg = window.OPPORTUNITY_HUB_CONFIG;
+        const res = await fetch(`${cfg.SUPABASE_URL}/functions/v1/razorpay-create-subscription`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: cfg.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `request failed (${res.status})`);
+        window.location.href = data.short_url;
+      } catch (err) {
+        alert("Could not start subscription: " + err.message);
+        btn.textContent = original;
+        btn.disabled = false;
+      }
+    }
 
     let map, markerLayer;
     let allOpps = [];

@@ -76,6 +76,18 @@
         .maybeSingle();
       return data;
     },
+    async getActiveSubscription(userId) {
+      if (!window.sb || !userId) return null;
+      const { data } = await window.sb
+        .from("subscriptions")
+        .select("status, current_period_end")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
     async signUp(email, password, username) {
       const { data, error } = await window.sb.auth.signUp({
         email,
@@ -136,8 +148,13 @@
 
     const profile = await Auth.getProfile(user.id);
     const uname = profile ? profile.username : user.email;
+    const activeSub = await Auth.getActiveSubscription(user.id);
+    const subBadge = activeSub
+      ? '<span class="sub-badge sub-active">SUBSCRIBER</span>'
+      : '<span class="sub-badge sub-inactive">FREE</span>';
     widget.innerHTML =
       `<span class="who">signed in as <a href="profile.html?id=${user.id}">${escapeHtml(uname)}</a></span>` +
+      subBadge +
       '<button id="logout-btn">Log Out</button>';
     document.getElementById("logout-btn").addEventListener("click", async () => {
       await Auth.signOut();

@@ -66,6 +66,12 @@ a { color: #00ff00; }
 
 .auth-widget { margin-top: 1rem; font-size: 0.75rem; }
 .auth-widget .who { opacity: 0.85; }
+.sub-badge {
+  display: inline-block; margin: 0 0.5rem; padding: 0.15rem 0.45rem;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.5px; border: 1px solid;
+}
+.sub-badge.sub-active { color: #000; background: #00ff00; border-color: #00ff00; }
+.sub-badge.sub-inactive { color: rgba(0,255,0,0.6); background: transparent; border-color: rgba(0,255,0,0.4); }
 .auth-widget button, .auth-widget .link-btn {
   background: transparent; color: #00ff00; border: 1px solid #00ff00;
   font-family: inherit; font-size: 0.72rem; padding: 0.25rem 0.6rem;
