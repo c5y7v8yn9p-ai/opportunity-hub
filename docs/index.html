@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Home</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=7">
+<link rel="stylesheet" href="css/theme.css?v=8">
 </head>
 <body>
 
@@ -30,6 +30,32 @@
     <div class="stat-tiles" id="stat-tiles" style="margin-left:0;margin-right:0;"></div>
   </div>
 
+  <div class="section-title">Explore the Tools</div>
+  <div class="container narrow">
+    <div class="tool-grid" id="tool-grid" style="margin-left:0;margin-right:0;">
+      <a class="tool-card" href="radar.html">
+        <div class="tc-tag">RADAR_ON</div>
+        <div class="tc-title">Opportunity Radar</div>
+        <div class="tc-desc">Every live opportunity, plotted by quality vs. confidence.</div>
+      </a>
+      <a class="tool-card" href="graph.html">
+        <div class="tc-tag">GRAPH_LIVE</div>
+        <div class="tc-title">Opportunity Graph</div>
+        <div class="tc-desc">How signals actually connect to companies and openings.</div>
+      </a>
+      <a class="tool-card" href="leads.html">
+        <div class="tc-tag">LEADS_DETECT</div>
+        <div class="tc-title">Leads</div>
+        <div class="tc-desc">Potential needs spotted before they're ever posted.</div>
+      </a>
+      <a class="tool-card" href="signals.html">
+        <div class="tc-tag">SIGNAL_FEED</div>
+        <div class="tc-title">Signals</div>
+        <div class="tc-desc">Funding, hiring and market activity as it happens.</div>
+      </a>
+    </div>
+  </div>
+
   <div class="section-title">Your Best Opportunities</div>
   <div class="container narrow">
     <div class="opp-grid" id="best-opps"><div class="loading">loading…</div></div>
@@ -40,9 +66,9 @@
     <div class="moves-list" id="moves-list" style="margin-left:0;margin-right:0;"></div>
   </div>
 
-  <div class="section-title">Signals You Should Know</div>
+  <div class="section-title">Market Pulse</div>
   <div class="container narrow">
-    <div class="category-row" id="signal-chips" style="margin-left:0;margin-right:0;"></div>
+    <div class="pulse-list" id="pulse-list" style="margin-left:0;margin-right:0;"></div>
   </div>
 
   <div class="everything-else-link"><a href="opportunities.html">Everything else →</a></div>
@@ -51,7 +77,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=7"></script>
+  <script src="js/supabase-client.js?v=8"></script>
   <script>
     renderNav("feed");
 
@@ -156,6 +182,7 @@
       const newCount = fresh.length;
       const matchCount = dna ? scored.filter((s) => s.match >= 25).length : activeOnly.length;
       const urgentCount = leads.length;
+      const industryCount = new Set(activeOnly.map((o) => o.industries && o.industries.name).filter(Boolean)).size;
 
       document.getElementById("greeting-sub").textContent = dna
         ? `You have ${matchCount} opportunit${matchCount === 1 ? "y" : "ies"} worth your attention.`
@@ -163,13 +190,18 @@
         ? `${activeOnly.length} opportunities are live right now. Finish onboarding to get personal matches.`
         : `${activeOnly.length} opportunities are live right now. Tell us what you're looking for to get personal matches.`;
 
-      document.getElementById("stat-tiles").innerHTML = dna
+      const coreTiles = dna
         ? `<div class="stat-tile match"><div class="st-value">${matchCount}</div><div class="st-label">Match</div></div>
            <div class="stat-tile"><div class="st-value">${newCount}</div><div class="st-label">New</div></div>
            <div class="stat-tile urgent"><div class="st-value">${urgentCount}</div><div class="st-label">Leads</div></div>`
         : `<div class="stat-tile"><div class="st-value">${activeOnly.length}</div><div class="st-label">Live</div></div>
            <div class="stat-tile"><div class="st-value">${newCount}</div><div class="st-label">New</div></div>
            <div class="stat-tile urgent"><div class="st-value">${urgentCount}</div><div class="st-label">Leads</div></div>`;
+      // Signal count is filled in below once that query resolves; industries
+      // we already have from this same fetch, so it renders immediately.
+      document.getElementById("stat-tiles").innerHTML = coreTiles +
+        `<div class="stat-tile" id="stat-tile-industries"><div class="st-value">${industryCount}</div><div class="st-label">Industries</div></div>
+         <div class="stat-tile" id="stat-tile-signals"><div class="st-value">…</div><div class="st-label">Signals</div></div>`;
 
       const bestMount = document.getElementById("best-opps");
       if (!best.length) {
@@ -208,19 +240,42 @@
           .join("");
       }
 
+      // Market Pulse — a real single-series bar chart (not a re-skinned pill
+      // row): top 5 signal types from the last 60 signals, ranked by count,
+      // bar length = count. One hue (accent) since it's one series; identity
+      // comes from the label, not color, so no legend is needed.
       try {
-        const { data: signals } = await window.sb
+        const { data: signals, count: signalsCount } = await window.sb
           .from("news_items")
-          .select("signal_type")
+          .select("signal_type", { count: "exact" })
           .order("published_at", { ascending: false })
           .limit(60);
+        const sigTile = document.getElementById("stat-tile-signals");
+        if (sigTile) sigTile.querySelector(".st-value").textContent = signalsCount != null ? signalsCount : (signals || []).length;
+
         const counts = {};
         (signals || []).forEach((s) => { counts[s.signal_type] = (counts[s.signal_type] || 0) + 1; });
         const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-        document.getElementById("signal-chips").innerHTML = top
-          .map(([type]) => `<a class="category-pill" href="signals.html">${escapeHtml(SIGNAL_TYPE_LABELS[type] || type)}</a>`)
-          .join("");
-      } catch (err) { /* signals teaser is optional */ }
+        const maxCount = top.length ? top[0][1] : 1;
+        const pulseMount = document.getElementById("pulse-list");
+        if (!top.length) {
+          pulseMount.innerHTML = '<div class="empty">No signals yet.</div>';
+        } else {
+          pulseMount.innerHTML = top
+            .map(
+              ([type, count]) => `
+            <a class="pulse-row" href="signals.html">
+              <div class="pulse-label">${escapeHtml(SIGNAL_TYPE_LABELS[type] || type)}</div>
+              <div class="pulse-track"><div class="pulse-bar" style="width:${Math.max(6, Math.round((count / maxCount) * 100))}%"></div></div>
+              <div class="pulse-value">${count}</div>
+            </a>`
+            )
+            .join("");
+        }
+      } catch (err) {
+        const sigTile = document.getElementById("stat-tile-signals");
+        if (sigTile) sigTile.querySelector(".st-value").textContent = "—";
+      }
     }
 
     let exIdx = 0;
