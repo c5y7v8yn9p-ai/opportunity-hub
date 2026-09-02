@@ -404,6 +404,26 @@ a { color: #00ff00; }
 }
 .speculative-banner b { text-transform: uppercase; letter-spacing: 0.5px; }
 
+/* ---------- Phase 3: saved searches + preferences ---------- */
+.save-search-row {
+  display: flex; gap: 0.5rem; margin-top: 0.85rem; flex-wrap: wrap;
+}
+.save-search-row input {
+  flex: 1; min-width: 140px; background: transparent; border: 1px solid rgba(0,255,0,0.5);
+  color: #00ff00; padding: 0.45rem 0.6rem; font-family: inherit; font-size: 0.76rem;
+}
+.save-search-row input:focus { outline: 1px solid #fff; }
+.saved-search-item {
+  border-bottom: 1px dotted rgba(0,255,0,0.4); padding: 0.65rem 0; font-size: 0.8rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap;
+}
+.saved-search-item .ss-name { font-weight: 700; }
+.saved-search-item .ss-name a { color: inherit; text-decoration: none; }
+.saved-search-item .ss-name a:hover { text-shadow: 0 0 6px #00ff00; }
+.saved-search-item .ss-desc { flex-basis: 100%; font-size: 0.7rem; opacity: 0.65; margin-top: 0.15rem; }
+.new-match-badge { margin-left: 0.4rem; }
+
+
 footer { text-align: center; font-size: 0.68rem; opacity: 0.5; padding: 2rem 1rem 1rem; position: relative; z-index: 10; letter-spacing: 0.5px; }
 
 @media (max-width: 600px) {

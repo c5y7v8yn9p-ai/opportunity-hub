@@ -133,6 +133,49 @@
         .eq("opportunity_id", opportunityId);
       if (error) throw error;
     },
+    // ---------- Phase 3: saved searches + preferences ----------
+    async getSavedSearches(userId) {
+      if (!window.sb || !userId) return [];
+      const { data, error } = await window.sb
+        .from("saved_searches")
+        .select("*")
+        .eq("profile_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    async saveSearch(userId, name, query) {
+      if (!window.sb || !userId) return;
+      const { error } = await window.sb
+        .from("saved_searches")
+        .insert({ profile_id: userId, name: name.slice(0, 80), query });
+      if (error) throw error;
+    },
+    async deleteSavedSearch(userId, id) {
+      if (!window.sb || !userId) return;
+      const { error } = await window.sb
+        .from("saved_searches")
+        .delete()
+        .eq("id", id)
+        .eq("profile_id", userId);
+      if (error) throw error;
+    },
+    async touchSavedSearch(userId, id) {
+      if (!window.sb || !userId) return;
+      await window.sb
+        .from("saved_searches")
+        .update({ last_viewed_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("profile_id", userId);
+    },
+    async updatePreferences(userId, prefs) {
+      if (!window.sb || !userId) return;
+      const { error } = await window.sb
+        .from("profiles")
+        .update({ preferences: prefs })
+        .eq("id", userId);
+      if (error) throw error;
+    },
   };
   window.Auth = Auth;
 

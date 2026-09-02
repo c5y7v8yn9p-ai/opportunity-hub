@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Profile</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=3">
+<link rel="stylesheet" href="css/theme.css?v=4">
 </head>
 <body>
 
@@ -30,6 +30,59 @@
       </div>
       <button class="btn-primary" id="save-profile-btn">Save</button>
       <div class="form-msg" id="edit-msg"></div>
+    </div>
+
+    <div id="preferences-box" class="form-box" style="display:none;">
+      <div class="box-title" style="margin-top:0;">Preferences</div>
+      <div class="section-sub" style="margin:-0.2rem 0 0.8rem;">Default filters for the Opportunities page. Nothing here sends email — it just changes what you see first.</div>
+      <div class="form-grid-3">
+        <div class="form-row">
+          <label>Default work mode</label>
+          <select id="pref-mode">
+            <option value="">Any</option>
+            <option value="remote">Remote</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="local">Local</option>
+            <option value="relocation">Relocation</option>
+            <option value="travel">Travel</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Default experience level</label>
+          <select id="pref-exp">
+            <option value="">Any</option>
+            <option value="no_experience">No experience</option>
+            <option value="beginner">Entry</option>
+            <option value="intermediate">Mid</option>
+            <option value="advanced">Senior</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Default sort</label>
+          <select id="pref-sort">
+            <option value="recommended">Recommended</option>
+            <option value="newest">Newest first</option>
+            <option value="score">Opportunity score</option>
+          </select>
+        </div>
+      </div>
+      <label class="speculative-toggle-label" style="display:block;margin:0.4rem 0 0.9rem;">
+        <input type="checkbox" id="pref-speculative">
+        Show speculative leads by default
+      </label>
+      <button class="btn-primary" id="save-prefs-btn">Save preferences</button>
+      <div class="form-msg" id="prefs-msg"></div>
+    </div>
+
+    <div id="saved-searches-box" style="display:none;">
+      <div class="box-title">Saved Searches</div>
+      <div class="section-sub" style="margin:-0.2rem 0 0.6rem;">Saved from the Opportunities page. A badge shows how many new listings match since you last opened it.</div>
+      <div id="saved-searches-list"><div class="loading">loading...</div></div>
+    </div>
+
+    <div id="saved-opps-box" style="display:none;">
+      <div class="box-title">Saved Opportunities</div>
+      <div id="saved-opps-list" class="opp-grid"><div class="loading">loading...</div></div>
     </div>
 
     <div class="box-title">Capabilities</div>
@@ -116,7 +169,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=3"></script>
+  <script src="js/supabase-client.js?v=4"></script>
   <script>
     renderNav(null);
 
@@ -124,6 +177,14 @@
     const profileId = params.get("id");
 
     const PROF_LABEL = { beginner: "Beginner", intermediate: "Intermediate", experienced: "Experienced", expert: "Expert" };
+    const SS_TYPE_LABELS = {
+      full_time: "Full-time", part_time: "Part-time", contract: "Contract",
+      freelance: "Freelance", gig: "Gig", one_time_task: "One-off task",
+      project: "Project", seasonal: "Seasonal", internship: "Internship",
+      apprenticeship: "Apprenticeship", volunteer: "Volunteer", service_request: "Service request",
+    };
+    const SS_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
+    const SS_EXP_LABELS = { no_experience: "No experience", beginner: "Entry", intermediate: "Mid", advanced: "Senior" };
 
     async function callAI(mode, text) {
       const cfg = window.OPPORTUNITY_HUB_CONFIG;
@@ -191,6 +252,125 @@
       msgEl.className = "form-msg ok";
       msgEl.textContent = `Added ${rows.length} capabilit${rows.length === 1 ? "y" : "ies"}.`;
       loadCapabilities(true);
+    }
+
+    function buildSavedSearchUrl(q) {
+      const p = new URLSearchParams();
+      if (q.industry) p.set("industry", q.industry);
+      if (q.type) p.set("type", q.type);
+      if (q.mode) p.set("mode", q.mode);
+      if (q.exp) p.set("exp", q.exp);
+      if (q.q) p.set("q", q.q);
+      if (q.sort) p.set("sort", q.sort);
+      if (q.speculative) p.set("speculative", "1");
+      const qs = p.toString();
+      return "opportunities.html" + (qs ? "?" + qs : "");
+    }
+
+    function describeSavedSearch(q) {
+      const parts = [];
+      if (q.type) parts.push(SS_TYPE_LABELS[q.type] || q.type);
+      if (q.mode) parts.push(SS_MODE_LABELS[q.mode] || q.mode);
+      if (q.exp) parts.push(SS_EXP_LABELS[q.exp] || q.exp);
+      if (q.q) parts.push(`"${q.q}"`);
+      if (q.speculative) parts.push("incl. speculative");
+      return parts.length ? parts.join(" · ") : "all opportunities";
+    }
+
+    async function loadSavedSearches(me) {
+      const container = document.getElementById("saved-searches-box");
+      const box = document.getElementById("saved-searches-list");
+      container.style.display = "block";
+      let list;
+      try {
+        list = await Auth.getSavedSearches(me.id);
+      } catch (err) {
+        box.innerHTML = '<div class="empty">could not load saved searches.</div>';
+        return;
+      }
+      if (!list.length) {
+        box.innerHTML = '<div class="empty">no saved searches yet — use "Save this search" on the Opportunities page.</div>';
+        return;
+      }
+
+      // "New since last viewed" — an in-app badge instead of email alerts
+      // (no email service is wired up; see Phase 3 notes). Counts are a
+      // best-effort client-side filter, same approach as the feed itself.
+      const counts = await Promise.all(
+        list.map(async (s) => {
+          try {
+            let q = window.sb
+              .from("opportunities")
+              .select("id, industry_id, opportunity_type, work_mode, experience_level, title")
+              .gt("created_at", s.last_viewed_at)
+              .limit(300);
+            q = s.query && s.query.speculative ? q.in("status", ["active", "speculative"]) : q.eq("status", "active");
+            const { data } = await q;
+            let rows = data || [];
+            const sq = s.query || {};
+            if (sq.industry) rows = rows.filter((r) => r.industry_id === sq.industry);
+            if (sq.type) rows = rows.filter((r) => r.opportunity_type === sq.type);
+            if (sq.mode) rows = rows.filter((r) => r.work_mode === sq.mode);
+            if (sq.exp) rows = rows.filter((r) => r.experience_level === sq.exp);
+            if (sq.q) { const qq = sq.q.toLowerCase(); rows = rows.filter((r) => (r.title || "").toLowerCase().includes(qq)); }
+            return rows.length;
+          } catch { return 0; }
+        })
+      );
+
+      box.innerHTML = list
+        .map((s, i) => {
+          const n = counts[i] || 0;
+          const badge = n ? `<span class="tag accent new-match-badge">${n} new</span>` : "";
+          return `<div class="saved-search-item" data-ss-id="${s.id}">
+            <div class="ss-name"><a href="${buildSavedSearchUrl(s.query || {})}" class="ss-open-link" data-ss-id="${s.id}">${escapeHtml(s.name)}</a> ${badge}</div>
+            <div class="ss-desc">${escapeHtml(describeSavedSearch(s.query || {}))}</div>
+            <button type="button" class="report-link ss-delete" data-ss-id="${s.id}">remove</button>
+          </div>`;
+        })
+        .join("");
+
+      box.querySelectorAll(".ss-open-link").forEach((a) => {
+        a.addEventListener("click", () => { Auth.touchSavedSearch(me.id, a.dataset.ssId); });
+      });
+      box.querySelectorAll(".ss-delete").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          await Auth.deleteSavedSearch(me.id, btn.dataset.ssId);
+          loadSavedSearches(me);
+        });
+      });
+    }
+
+    async function loadSavedOpportunities(me) {
+      const container = document.getElementById("saved-opps-box");
+      const box = document.getElementById("saved-opps-list");
+      container.style.display = "block";
+      const ids = await Auth.getSavedIds(me.id);
+      if (!ids.size) {
+        box.innerHTML = '<div class="empty">no saved opportunities yet — use the ☆ save button on any listing.</div>';
+        return;
+      }
+      const { data } = await window.sb
+        .from("opportunities")
+        .select("id, title, body, status, created_at")
+        .in("id", Array.from(ids))
+        .order("created_at", { ascending: false });
+      if (!data || !data.length) {
+        box.innerHTML = '<div class="empty">no saved opportunities yet.</div>';
+        return;
+      }
+      box.innerHTML = data
+        .map(
+          (opp) => `<div class="opp-card">
+            <div class="card-title"><a href="opportunity.html?id=${opp.id}" style="color:inherit;text-decoration:none;">${escapeHtml(opp.title)}</a></div>
+            <div class="card-text">${escapeHtml((opp.body || "").slice(0, 140))}</div>
+            <div class="card-footer">
+              <span>${timeAgo(opp.created_at)}</span>
+              ${opp.status !== "active" ? `<span class="tag">${escapeHtml(opp.status)}</span>` : ""}
+            </div>
+          </div>`
+        )
+        .join("");
     }
 
     (async function init() {
@@ -305,6 +485,33 @@
           await addCapabilities([{ skill, proficiency }], msg);
           document.getElementById("manual-skill").value = "";
         });
+
+        document.getElementById("preferences-box").style.display = "block";
+        const prefs = profile.preferences || {};
+        document.getElementById("pref-mode").value = prefs.mode || "";
+        document.getElementById("pref-exp").value = prefs.exp || "";
+        document.getElementById("pref-sort").value = prefs.sort || "recommended";
+        document.getElementById("pref-speculative").checked = !!prefs.speculative;
+        document.getElementById("save-prefs-btn").addEventListener("click", async () => {
+          const msg = document.getElementById("prefs-msg");
+          const newPrefs = {
+            mode: document.getElementById("pref-mode").value,
+            exp: document.getElementById("pref-exp").value,
+            sort: document.getElementById("pref-sort").value,
+            speculative: document.getElementById("pref-speculative").checked,
+          };
+          try {
+            await Auth.updatePreferences(me.id, newPrefs);
+            msg.className = "form-msg ok";
+            msg.textContent = "Saved — applies next time you open Opportunities.";
+          } catch (err) {
+            msg.className = "form-msg err";
+            msg.textContent = err.message || "Could not save preferences.";
+          }
+        });
+
+        loadSavedSearches(me);
+        loadSavedOpportunities(me);
       } else if (me) {
         document.getElementById("rate-box").style.display = "block";
         document.getElementById("submit-rating-btn").addEventListener("click", async () => {

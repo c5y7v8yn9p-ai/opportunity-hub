@@ -5,6 +5,8 @@
 //   #search-input #industry-chips #type-chips #workmode-chips
 //   #experience-chips #sort-select #results-count #opportunities
 //   #leaflet-map #report-modal (+ its fields) #map-filter-note
+//   #save-search-name #save-search-btn #save-search-msg (optional — only
+//   present on pages with the full filter bar, i.e. opportunities.html)
 //
 // Call initOpportunitiesFeed() once the DOM is ready.
 
@@ -59,6 +61,7 @@ function parseSearchQuery(raw) {
   let myCapabilities = [];
   let mySavedIds = new Set();
   let currentUser = null;
+  let myPreferences = null;
   let mapFilterIds = null; // Set of ids, or null = no map-cluster filter active
   let mapFilterLabel = "";
   let showSpeculative = false;
@@ -308,7 +311,7 @@ function parseSearchQuery(raw) {
     }
   }
 
-  async function loadIndustries() {
+  async function loadIndustries(preselectId) {
     const mount = document.getElementById("industry-chips");
     if (!mount) return;
     if (!window.OH_CONFIGURED) { mount.innerHTML = ""; return; }
@@ -326,10 +329,12 @@ function parseSearchQuery(raw) {
         render();
       });
       mount.appendChild(allChip);
+      let preselectChipEl = null;
       (data || []).forEach((ind) => {
         const chip = document.createElement("span");
         chip.className = "chip";
         chip.textContent = ind.name;
+        chip.dataset.industryId = ind.id;
         chip.addEventListener("click", () => {
           activeIndustry = ind.id;
           mount.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
@@ -337,7 +342,9 @@ function parseSearchQuery(raw) {
           render();
         });
         mount.appendChild(chip);
+        if (preselectId && ind.id === preselectId) preselectChipEl = chip;
       });
+      if (preselectChipEl) preselectChipEl.click();
     } catch (err) { mount.innerHTML = ""; }
   }
 
@@ -351,6 +358,18 @@ function parseSearchQuery(raw) {
         onPick(chip.dataset[valueAttr] || "");
       });
     });
+  }
+
+  // Selects a static chip (type/workmode/experience) programmatically by
+  // its data-* value, reusing the same click handler wireChipRow already
+  // attached — used to restore a saved search or a logged-in user's
+  // preferences when the page first loads.
+  function preselectChip(containerId, dataAttr, value) {
+    if (!value) return;
+    const mount = document.getElementById(containerId);
+    if (!mount) return;
+    const chip = mount.querySelector(`.chip[data-${dataAttr}="${value}"]`);
+    if (chip) chip.click();
   }
 
   async function loadFeed() {
@@ -395,6 +414,104 @@ function parseSearchQuery(raw) {
       if (myCapabilities.length && matchOpt) matchOpt.style.display = "";
       mySavedIds = await Auth.getSavedIds(currentUser.id);
     } catch { /* no capabilities yet — matching just stays off */ }
+    try {
+      const profile = await Auth.getProfile(currentUser.id);
+      myPreferences = (profile && profile.preferences) || {};
+    } catch { myPreferences = {}; }
+  }
+
+  // Phase 3 — saved searches: builds the {industry,type,mode,exp,q,sort,
+  // speculative} shape stored in saved_searches.query and used to build a
+  // shareable deep link (?industry=&type=&mode=&exp=&q=&sort=&speculative=1).
+  function buildCurrentQuery() {
+    return {
+      industry: activeIndustry || null,
+      type: activeType || "",
+      mode: activeWorkMode || "",
+      exp: activeExperience || "",
+      q: searchTerm || "",
+      sort: sortMode || "recommended",
+      speculative: !!showSpeculative,
+    };
+  }
+
+  function describeCurrentFilters() {
+    const parts = [];
+    const industryChip = document.querySelector("#industry-chips .chip.active");
+    if (industryChip && industryChip.textContent !== "All") parts.push(industryChip.textContent);
+    if (activeType) parts.push(OPPORTUNITY_TYPE_LABELS[activeType] || activeType);
+    if (activeWorkMode) parts.push(WORK_MODE_LABELS[activeWorkMode] || activeWorkMode);
+    if (activeExperience) parts.push(EXPERIENCE_LABELS[activeExperience] || activeExperience);
+    if (searchTerm) parts.push(`"${searchTerm}"`);
+    return parts.length ? parts.join(" · ") : "All opportunities";
+  }
+
+  function wireSaveSearch() {
+    const btn = document.getElementById("save-search-btn");
+    if (!btn) return; // only present on the full filter bar (opportunities.html)
+    btn.addEventListener("click", async () => {
+      const msg = document.getElementById("save-search-msg");
+      if (!currentUser) { Auth.requireLogin(); return; }
+      const nameInput = document.getElementById("save-search-name");
+      const name = (nameInput && nameInput.value.trim()) || describeCurrentFilters();
+      btn.disabled = true;
+      try {
+        await Auth.saveSearch(currentUser.id, name, buildCurrentQuery());
+        if (msg) { msg.className = "form-msg ok"; msg.textContent = `Saved as "${name}" — find it on your profile page.`; }
+        if (nameInput) nameInput.value = "";
+      } catch (err) {
+        if (msg) { msg.className = "form-msg err"; msg.textContent = err.message || "Could not save search."; }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Applies, in priority order: (1) an explicit URL query string — a saved
+  // search's deep link, or the older ?q=/?speculative=1 links from Signals
+  // and the homepage's "Why This Matters" box; (2) failing that, a logged
+  // -in user's saved preferences, as sensible defaults only (never search
+  // text — a default search box would be confusing, not helpful).
+  async function applyIncomingState() {
+    const params = new URLSearchParams(window.location.search);
+    const hasParams = ["industry", "type", "mode", "exp", "q", "sort", "speculative"].some((k) => params.has(k));
+    const prefs = myPreferences || {};
+
+    // Preferences only cover work mode / experience / sort / speculative —
+    // no default industry or type, to keep the Preferences box on the
+    // profile page from needing its own industries fetch.
+    const industryId = params.get("industry") || null;
+    const type = params.get("type") || "";
+    const mode = params.get("mode") || (!hasParams && prefs.mode) || "";
+    const exp = params.get("exp") || (!hasParams && prefs.exp) || "";
+    const q = params.get("q") || "";
+    const sort = params.get("sort") || (!hasParams && prefs.sort) || null;
+    const speculative = params.get("speculative") === "1" || (!hasParams && !!prefs.speculative);
+
+    if (industryId) await loadIndustries(industryId);
+    else await loadIndustries();
+
+    preselectChip("type-chips", "type", type);
+    preselectChip("workmode-chips", "mode", mode);
+    preselectChip("experience-chips", "exp", exp);
+
+    if (q) {
+      const input = document.getElementById("search-input");
+      if (input) input.value = q;
+      searchTerm = q;
+    }
+
+    if (sort) {
+      const sortSelect = document.getElementById("sort-select");
+      if (sortSelect) sortSelect.value = sort;
+      sortMode = sort;
+    }
+
+    const specToggle = document.getElementById("speculative-toggle");
+    if (speculative && specToggle) {
+      specToggle.checked = true;
+      showSpeculative = true;
+    }
   }
 
   let reportingOppId = null;
@@ -450,20 +567,19 @@ function parseSearchQuery(raw) {
     wireChipRow("experience-chips", "exp", (v) => { activeExperience = v; render(); });
 
     const specToggle = document.getElementById("speculative-toggle");
-    if (specToggle) {
-      // Deep link support: opportunities.html?speculative=1 (from Signals)
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("speculative") === "1") { specToggle.checked = true; showSpeculative = true; }
-      specToggle.addEventListener("change", (e) => { showSpeculative = e.target.checked; loadFeed(); });
-    }
+    if (specToggle) specToggle.addEventListener("change", (e) => { showSpeculative = e.target.checked; loadFeed(); });
 
     const sortSelect = document.getElementById("sort-select");
     if (sortSelect) sortSelect.addEventListener("change", (e) => { sortMode = e.target.value; render(); });
 
     wireReportModal();
+    wireSaveSearch();
     initMap();
-    loadIndustries();
     await loadMyCapabilities();
+    // loadIndustries() runs inside applyIncomingState() so a saved search's
+    // industry (an id, not a chip that already exists in the DOM) can be
+    // preselected the moment the chip list is built, instead of racing it.
+    await applyIncomingState();
     await loadFeed();
   }
 
