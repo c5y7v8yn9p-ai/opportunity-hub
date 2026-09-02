@@ -1,4 +1,4 @@
-# OpportunityHub — Setup Guide
+# Seeker — Setup Guide
 
 This is now a real full-stack site: accounts, a live opportunity feed (auto-scraped
 + user-submitted), direct messaging, ratings, and paid courses. It needs a few

@@ -1,4 +1,4 @@
-// OpportunityHub — shared Opportunities+Map feed. Used by both index.html
+// Seeker — shared Opportunities+Map feed. Used by both index.html
 // (FEED — homepage) and opportunities.html (OPPORTUNITIES — the dedicated
 // full database page). Both pages include this file after supabase-client.js
 // and Leaflet + Leaflet.markercluster, and provide the same container IDs:

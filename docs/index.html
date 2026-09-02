@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpportunityHub // Home</title>
+<title>Seeker // Home</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=8">
+<link rel="stylesheet" href="css/theme.css?v=9">
 </head>
 <body>
 
   <div class="header">
-    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <h1><a href="index.html">═ SEEKER ═</a></h1>
+    <div class="tagline">Tell us what you're seeking. We'll find what matters.</div>
     <div class="updated"><span class="dot"></span><span id="updated">connecting...</span></div>
     <div id="site-nav"></div>
   </div>
@@ -66,6 +67,12 @@
     <div class="moves-list" id="moves-list" style="margin-left:0;margin-right:0;"></div>
   </div>
 
+  <div class="section-title">Under the Radar</div>
+  <div class="section-sub" style="margin:-0.6rem 0.6rem 0.9rem;">Real, decent-quality opportunities that haven't shown up in your top picks yet — worth a look before everyone else finds them.</div>
+  <div class="container narrow">
+    <div class="opp-grid" id="under-radar-list"><div class="loading">loading…</div></div>
+  </div>
+
   <div class="section-title">Market Pulse</div>
   <div class="container narrow">
     <div class="pulse-list" id="pulse-list" style="margin-left:0;margin-right:0;"></div>
@@ -77,7 +84,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=8"></script>
+  <script src="js/supabase-client.js?v=9"></script>
   <script>
     renderNav("feed");
 
@@ -137,6 +144,26 @@
           <div class="card-footer" style="margin-top:0.7rem;justify-content:flex-end;">
             ${applyHref ? `<a class="btn-primary" data-apply-id="${opp.id}" href="${applyHref}" target="${opp.source_type === "user" ? "_self" : "_blank"}" rel="noopener">${applyLabel} →</a>` : ""}
           </div>
+        </div>`;
+    }
+
+    // Under the Radar — real, decent-quality opportunities not already
+    // surfaced in Best Opportunities or Today's Moves. Honest phrasing only:
+    // we don't have applicant-count data, so we never claim "low competition,"
+    // just that it hasn't been featured above yet.
+    function underRadarCardHtml(opp) {
+      const q = window.OH_qualityBucket(opp);
+      const conf = window.OH_computeConfidence(opp);
+      return `
+        <div class="opp-card">
+          <div class="score-row">
+            <div class="score-pill ${q.cls}"><span class="sp-label">Quality</span><span class="sp-value">${q.label}</span></div>
+            <div class="score-pill"><span class="sp-label">Confidence</span><span class="sp-value">${conf}%</span></div>
+          </div>
+          <div class="card-title"><a href="opportunity.html?id=${opp.id}">${escapeHtml(oppLabel(opp))}</a></div>
+          ${opp.company ? `<div style="margin:0.1rem 0;">${window.OH_companyLinkHtml(opp.company)}</div>` : ""}
+          <div class="card-text">${escapeHtml(metaLine(opp))}</div>
+          <div class="card-footer" style="margin-top:0.5rem;"><span>${timeAgo(opp.created_at)} · not yet in your top picks</span></div>
         </div>`;
     }
 
@@ -213,13 +240,29 @@
         });
       }
 
+      // Today's Moves — Apply / Reach Out / Watch / Deadline. "Deadline"
+      // only appears when a live opportunity actually has a real end_date
+      // inside the window below — never invented urgency.
+      const DEADLINE_WINDOW_DAYS = 5;
+      const withDeadline = scored
+        .filter((s) => s.opp.status === "active" && s.opp.end_date)
+        .map((s) => ({ ...s, daysLeft: Math.ceil((new Date(s.opp.end_date).getTime() - now) / 86400000) }))
+        .filter((s) => s.daysLeft >= 0 && s.daysLeft <= DEADLINE_WINDOW_DAYS)
+        .sort((a, b) => a.daysLeft - b.daysLeft);
+
       const moves = [];
       if (best[0]) moves.push({ verb: "Apply", opp: best[0].opp, meta: dna ? `${best[0].match}% match` : "top pick today" });
-      if (leads[0] && (!best[0] || leads[0].opp.id !== best[0].opp.id)) moves.push({ verb: "Contact", opp: leads[0].opp, meta: "high-intent lead" });
+      if (leads[0] && !moves.some((m) => m.opp.id === leads[0].opp.id)) moves.push({ verb: "Reach Out", opp: leads[0].opp, meta: "high-intent lead" });
       if (fresh[0] && !moves.some((m) => m.opp.id === fresh[0].opp.id)) moves.push({ verb: "Watch", opp: fresh[0].opp, meta: "new today" });
+      if (withDeadline[0] && !moves.some((m) => m.opp.id === withDeadline[0].opp.id)) {
+        const d = withDeadline[0];
+        moves.push({ verb: "Deadline", opp: d.opp, meta: d.daysLeft === 0 ? "closes today" : `closes in ${d.daysLeft}d` });
+      }
       const usedIds = new Set(moves.map((m) => m.opp.id));
-      const exploreCandidate = scored.filter((s) => !usedIds.has(s.opp.id) && s.opp.status !== "speculative").sort((a, b) => (b.opp.score || 0) - (a.opp.score || 0))[0];
-      if (exploreCandidate) moves.push({ verb: "Explore", opp: exploreCandidate.opp, meta: "worth a look" });
+      if (moves.length < 4) {
+        const exploreCandidate = scored.filter((s) => !usedIds.has(s.opp.id) && s.opp.status !== "speculative").sort((a, b) => (b.opp.score || 0) - (a.opp.score || 0))[0];
+        if (exploreCandidate) moves.push({ verb: "Explore", opp: exploreCandidate.opp, meta: "worth a look" });
+      }
 
       const movesMount = document.getElementById("moves-list");
       if (!moves.length) {
@@ -239,6 +282,19 @@
           )
           .join("");
       }
+
+      // Under the Radar — anything decent that isn't already featured above.
+      const featuredIds = new Set([...best.map((s) => s.opp.id), ...moves.map((m) => m.opp.id)]);
+      const underRadar = scored
+        .filter((s) => s.opp.status === "active" && !featuredIds.has(s.opp.id))
+        .filter((s) => window.OH_qualityBucket(s.opp).label !== "LOW")
+        .filter((s) => s.opp.created_at && now - new Date(s.opp.created_at).getTime() < 14 * 86400000)
+        .sort((a, b) => rank(b) - rank(a))
+        .slice(0, 3);
+      const radarMount = document.getElementById("under-radar-list");
+      radarMount.innerHTML = underRadar.length
+        ? underRadar.map((s) => underRadarCardHtml(s.opp)).join("")
+        : '<div class="empty">Nothing under the radar right now — check back as new listings come in.</div>';
 
       // Market Pulse — a real single-series bar chart (not a re-skinned pill
       // row): top 5 signal types from the last 60 signals, ranked by count,

@@ -1,4 +1,4 @@
-// OpportunityHub — shared Supabase client, auth helpers, and nav renderer.
+// Seeker — shared Supabase client, auth helpers, and nav renderer.
 // Loaded on every page after config.js and the supabase-js CDN script.
 
 (function () {
@@ -342,7 +342,7 @@
   // trustworthy by design (spec section 17: government gets trust-first UX).
   function trustState(opp) {
     if (opp.status === "speculative") return { key: "detected", label: "Detected", hint: "AI/system inference from a news signal — not a confirmed posting." };
-    if (opp.source_type === "user") return { key: "unverified", label: "Unverified", hint: "Self-submitted — not yet confirmed by OpportunityHub." };
+    if (opp.source_type === "user") return { key: "unverified", label: "Unverified", hint: "Self-submitted — not yet confirmed by Seeker." };
     if (opp.government_level) return { key: "verified", label: "Verified", hint: "Official source, scraped directly." };
     return { key: "confirmed", label: "Confirmed", hint: "From a live listing on a real source." };
   }
@@ -357,7 +357,7 @@
   // FACT / SIGNAL / INFERENCE / PREDICTION — a signal is always a fact;
   // everything downstream of it is explicitly labeled as interpretation,
   // not presented as more news. Templates are intentionally plain and
-  // conservative rather than generated, so OpportunityHub never states an
+  // conservative rather than generated, so Seeker never states an
   // inference as if it were verified.
   const SIGNAL_TEMPLATES = {
     funding: { inference: "may increase hiring, expansion, and demand for vendors", prediction: "Hiring and vendor activity are likely to rise in the coming weeks." },

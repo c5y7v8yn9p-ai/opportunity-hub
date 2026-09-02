@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpportunityHub // Company</title>
+<title>Seeker // Company</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=8">
+<link rel="stylesheet" href="css/theme.css?v=9">
 </head>
 <body>
 
   <div class="header">
-    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <h1><a href="index.html">═ SEEKER ═</a></h1>
     <div id="site-nav"></div>
   </div>
 
@@ -22,7 +22,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=8"></script>
+  <script src="js/supabase-client.js?v=9"></script>
   <script>
     renderNav("");
 
@@ -66,7 +66,7 @@
       if (!name) { mount.innerHTML = '<div class="empty">No company specified.</div>'; return; }
       if (!window.OH_CONFIGURED) { mount.innerHTML = '<div class="empty">Supabase isn\'t configured yet.</div>'; return; }
 
-      document.title = "OpportunityHub // " + name;
+      document.title = "Seeker // " + name;
 
       const [{ data: opps }, { data: signals }] = await Promise.all([
         window.sb.from("opportunities")
@@ -89,7 +89,7 @@
         mount.innerHTML = `
           <div class="section-title" style="padding-left:0;">${escapeHtml(name)}</div>
           <div class="tech-label">COMPANY INTELLIGENCE</div>
-          <div class="empty" style="margin-top:0.8rem;">No public postings or signals mention "${escapeHtml(name)}" yet. This page aggregates what OpportunityHub has actually seen — it isn't a company registry.</div>`;
+          <div class="empty" style="margin-top:0.8rem;">No public postings or signals mention "${escapeHtml(name)}" yet. This page aggregates what Seeker has actually seen — it isn't a company registry.</div>`;
         return;
       }
 

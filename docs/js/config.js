@@ -1,4 +1,4 @@
-// OpportunityHub — Supabase connection config.
+// Seeker — Supabase connection config.
 //
 // These two values come from your Supabase project dashboard:
 // Project Settings -> API -> "Project URL" and "anon public" key.

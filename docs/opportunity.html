@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpportunityHub // Opportunity</title>
+<title>Seeker // Opportunity</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=8">
+<link rel="stylesheet" href="css/theme.css?v=9">
 </head>
 <body>
 
   <div class="header">
-    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <h1><a href="index.html">═ SEEKER ═</a></h1>
     <div id="site-nav"></div>
   </div>
 
@@ -22,7 +22,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=8"></script>
+  <script src="js/supabase-client.js?v=9"></script>
   <script>
     renderNav("opportunities");
 
@@ -66,7 +66,7 @@
         return;
       }
 
-      document.title = "OpportunityHub // " + (opp.title || "Opportunity");
+      document.title = "Seeker // " + (opp.title || "Opportunity");
 
       const metaChips = [];
       if (opp.industries && opp.industries.name) metaChips.push(opp.industries.name);
@@ -131,7 +131,7 @@
           <div class="detail-sub">${escapeHtml(opp.source || (opp.profiles ? "Posted by " + opp.profiles.username : ""))} · ${opp.created_at ? timeAgo(opp.created_at) : ""}</div>
           ${opp.company ? `<div style="margin-bottom:0.6rem;">${window.OH_companyLinkHtml(opp.company)}</div>` : ""}
           ${scoreRow}
-          ${whyList ? `<div class="detail-section-label">Why This Matches</div>${whyList}` : ""}
+          ${whyList ? `<div class="detail-section-label">Why You</div>${whyList}` : ""}
           <div class="detail-meta-row">
             ${metaChips.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
             ${payLine ? `<span class="tag accent">${escapeHtml(payLine)}</span>` : ""}
@@ -188,7 +188,7 @@
           .maybeSingle();
         if (signal) {
           document.getElementById("related-signal-mount").innerHTML = `
-            <div class="detail-section-label">Related Signal</div>
+            <div class="detail-section-label">Why Now</div>
             ${window.OH_evidenceChainHtml(signal)}
             <div class="signal-card" style="margin-top:0.6rem;">
               <div class="sc-title"><a href="${escapeHtml(signal.url)}" target="_blank" rel="noopener">${escapeHtml(signal.title)}</a></div>

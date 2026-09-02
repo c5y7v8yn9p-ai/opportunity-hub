@@ -3,20 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpportunityHub // Profile</title>
+<title>Seeker // Profile</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=8">
+<link rel="stylesheet" href="css/theme.css?v=9">
 </head>
 <body>
 
   <div class="header">
-    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <h1><a href="index.html">═ SEEKER ═</a></h1>
     <div class="tagline">User profile</div>
     <div id="site-nav"></div>
   </div>
 
   <div class="container narrow">
     <div id="profile-body"><div class="loading">loading profile...</div></div>
+
+    <div id="dna-summary-box" class="form-box" style="display:none;">
+      <div class="box-title" style="margin-top:0;">Your Seeker DNA</div>
+      <div class="tech-label" style="margin-top:0;">YOU TOLD US</div>
+      <div id="dna-told-us"></div>
+      <div class="tech-label">SEEKER IS LEARNING</div>
+      <div id="dna-inferred"></div>
+      <div style="margin-top:0.6rem;"><a href="onboarding.html" style="font-size:0.76rem;">Edit what you're seeking →</a></div>
+    </div>
 
     <div id="edit-box" class="form-box" style="display:none;">
       <div class="box-title" style="margin-top:0;">Edit Your Profile</div>
@@ -98,6 +107,12 @@
           Not sure what to write? <a href="#" id="show-questions-link">Answer a few quick questions instead</a>.
         </p>
 
+        <div style="margin: 0 0 0.7rem;">
+          <label for="resume-upload" class="btn-secondary" style="display:inline-block; cursor:pointer;">Upload resume (PDF) →</label>
+          <input type="file" id="resume-upload" accept="application/pdf" style="display:none;">
+        </div>
+        <div class="form-msg" id="resume-msg"></div>
+
         <div id="guiding-questions" style="display:none; margin-bottom:0.8rem;">
           <div class="form-row">
             <label>What have you done for work before (paid or unpaid)?</label>
@@ -168,10 +183,12 @@
   <footer>RATINGS ARE PUBLIC AND CANNOT BE DELETED ONCE SUBMITTED</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=8"></script>
+  <script src="js/supabase-client.js?v=9"></script>
   <script>
     renderNav(null);
+    if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
 
     const params = new URLSearchParams(window.location.search);
     const profileId = params.get("id");
@@ -415,6 +432,48 @@
       loadCapabilities(isMe);
 
       if (isMe) {
+        // "Your Seeker DNA" — told-us (onboarding answers) vs. inferred
+        // (learned from real save/apply/contact activity). Never blend the
+        // two into one number; keep the distinction visible per spec.
+        const INTENT_LABELS = {
+          find_job: "Find a job", government_jobs: "Government jobs", freelance_work: "Freelance work",
+          find_clients: "Find clients", grow_business: "Grow my business", funding: "Funding", grants: "Grants",
+          tenders: "Tenders", scholarships: "Scholarships", internships: "Internships", projects: "Projects",
+          partnerships: "Partnerships", investment: "Investment", training: "Training", explore: "Exploring",
+        };
+        const intents = Array.isArray(profile.intents) ? profile.intents : [];
+        const dna = profile.dna || {};
+        const toldUsChips = intents.length
+          ? `<div class="chip-row" style="margin:0 0 0.5rem; flex-wrap:wrap;">${intents.map((i) => `<span class="chip active">${escapeHtml(INTENT_LABELS[i] || i)}</span>`).join("")}</div>`
+          : '<div class="empty">Nothing yet — <a href="onboarding.html">tell us what you\'re seeking</a>.</div>';
+        const toldUsFields = [];
+        Object.values(dna).forEach((cluster) => {
+          if (!cluster || typeof cluster !== "object") return;
+          Object.entries(cluster).forEach(([k, v]) => {
+            if (v === true) toldUsFields.push(k.replace(/_/g, " "));
+            else if (v && typeof v === "string") toldUsFields.push(v);
+          });
+        });
+        document.getElementById("dna-told-us").innerHTML = toldUsChips +
+          (toldUsFields.length ? `<div style="font-size:0.8rem; opacity:0.85; margin-top:0.3rem;">${escapeHtml(toldUsFields.slice(0, 8).join(" · "))}</div>` : "");
+
+        window.OH_getEventBoostProfile(me.id).then((boostProfile) => {
+          const inferredEl = document.getElementById("dna-inferred");
+          if (!boostProfile || !boostProfile.eventCount) {
+            inferredEl.innerHTML = '<div class="empty">Save, apply, or contact a few opportunities and Seeker will start learning what you actually want.</div>';
+            return;
+          }
+          const topTypes = Array.from(boostProfile.types.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k.replace(/_/g, " "));
+          const topCompanies = Array.from(boostProfile.companies.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+          const bits = [];
+          if (topTypes.length) bits.push(`leaning toward ${topTypes.join(", ")}`);
+          if (topCompanies.length) bits.push(`following ${topCompanies.join(", ")}`);
+          inferredEl.innerHTML = bits.length
+            ? `<div style="font-size:0.8rem; opacity:0.85;">Based on ${boostProfile.eventCount} real action${boostProfile.eventCount === 1 ? "" : "s"}, you seem ${escapeHtml(bits.join(" and "))}.</div>`
+            : '<div class="empty">Not enough activity yet to learn from.</div>';
+        });
+        document.getElementById("dna-summary-box").style.display = "block";
+
         document.getElementById("edit-box").style.display = "block";
         document.getElementById("edit-bio").value = profile.bio || "";
         document.getElementById("edit-location").value = profile.location || "";
@@ -442,6 +501,37 @@
         document.getElementById("show-questions-link").addEventListener("click", (e) => {
           e.preventDefault();
           document.getElementById("guiding-questions").style.display = "block";
+        });
+
+        document.getElementById("resume-upload").addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          const msg = document.getElementById("resume-msg");
+          if (!file) return;
+          if (!window.pdfjsLib) {
+            msg.className = "form-msg err";
+            msg.textContent = "Resume reading isn't available right now — paste your experience as text above instead.";
+            return;
+          }
+          msg.className = "form-msg";
+          msg.textContent = "Reading resume…";
+          try {
+            const buf = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+            let text = "";
+            for (let p = 1; p <= pdf.numPages; p++) {
+              const page = await pdf.getPage(p);
+              const content = await page.getTextContent();
+              text += content.items.map((it) => it.str).join(" ") + "\n";
+            }
+            text = text.replace(/\s+/g, " ").trim().slice(0, 6000);
+            if (!text) throw new Error("Could not find any text in that PDF — it may be a scanned image. Try typing your experience above instead.");
+            document.getElementById("cap-input").value = text;
+            msg.className = "form-msg ok";
+            msg.textContent = "Loaded — review the text above, then click Extract capabilities with AI. Nothing is uploaded or stored.";
+          } catch (err) {
+            msg.className = "form-msg err";
+            msg.textContent = err.message || "Could not read that file — try a text-based PDF, or type your experience manually.";
+          }
         });
 
         document.getElementById("cap-ai-btn").addEventListener("click", async () => {
