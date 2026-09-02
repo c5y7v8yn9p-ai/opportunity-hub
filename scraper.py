@@ -607,6 +607,7 @@ def fetch_remotive():
             items.append({
                 "source": "Remotive",
                 "title": f"{title} at {company}" if company else title,
+                "company": company or None,
                 "body": desc,
                 "engagement": 0,
                 "url": job.get("url") or "",
@@ -644,6 +645,7 @@ def fetch_arbeitnow():
             items.append({
                 "source": "Arbeitnow",
                 "title": f"{title} at {company}" if company else title,
+                "company": company or None,
                 "body": desc,
                 "engagement": 0,
                 "url": job.get("url") or "",
@@ -683,6 +685,7 @@ def fetch_remoteok():
             items.append({
                 "source": "RemoteOK",
                 "title": f"{title} at {company}" if company else title,
+                "company": company or None,
                 "body": desc,
                 "engagement": 0,
                 "url": job.get("url") or (f"https://remoteok.com/remote-jobs/{job.get('id')}" if job.get("id") else ""),
@@ -743,6 +746,7 @@ def fetch_india_jobs():
             items.append({
                 "source": "Remotive (India)",
                 "title": f"{title} at {company}" if company else title,
+                "company": company or None,
                 "body": desc,
                 "engagement": 0,
                 "url": job.get("url") or "",
@@ -779,6 +783,7 @@ def fetch_india_jobs():
             items.append({
                 "source": "RemoteOK (India)",
                 "title": f"{title} at {company}" if company else title,
+                "company": company or None,
                 "body": desc,
                 "engagement": 0,
                 "url": job.get("url") or (f"https://remoteok.com/remote-jobs/{job.get('id')}" if job.get("id") else ""),
@@ -929,6 +934,7 @@ def push_to_supabase(items, industry_map):
         "pay_max": it.get("pay_max"),
         "pay_currency": it.get("pay_currency"),
         "industry_id": match_industry(it.get("industry_guess"), industry_map),
+        "company": it.get("company"),
         "city": it.get("geo_city"),
         "country": it.get("geo_country"),
         "latitude": it.get("latitude"),
