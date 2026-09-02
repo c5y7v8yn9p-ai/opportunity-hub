@@ -52,7 +52,21 @@ jobs:
               exit 0
             fi
             echo "Push attempt $attempt was rejected (remote moved) — rebasing and retrying..."
-            git pull --rebase origin main
+            # In case a previous attempt left a half-finished rebase.
+            git rebase --abort 2>/dev/null || true
+            # -X theirs: this file is regenerated from scratch every run and
+            # explicitly documented as non-critical debug output (the live
+            # site reads Supabase, never this file) — so on a genuine content
+            # conflict (two runs' debug snapshots differ), always keep THIS
+            # run's freshly generated version rather than leaving conflict
+            # markers for `git rebase` to choke on. Note: during a rebase,
+            # "theirs" means the commit being replayed (ours, confusingly) —
+            # not the upstream side — this is intentional, not a typo.
+            if ! git pull --rebase -X theirs origin main; then
+              echo "Rebase still failed — aborting and giving up on this run's debug JSON."
+              git rebase --abort 2>/dev/null || true
+              break
+            fi
             sleep $((RANDOM % 5 + 2))
           done
-          echo "Could not push the debug JSON refresh after 5 attempts — leaving it for the next run. This does not affect the live site."
+          echo "Could not push the debug JSON refresh after retries — leaving it for the next run. This does not affect the live site."
