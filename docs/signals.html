@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Signals</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=5">
+<link rel="stylesheet" href="css/theme.css?v=6">
 </head>
 <body>
 
@@ -54,7 +54,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=5"></script>
+  <script src="js/supabase-client.js?v=6"></script>
   <script>
     renderNav("signals");
 
@@ -109,6 +109,7 @@
                 <span class="news-item-meta">${escapeHtml(s.source || "")} · ${when}</span>
                 ${sourcesNote}
               </div>
+              ${window.OH_evidenceChainHtml(s)}
               <div class="sc-footer">
                 ${signalToOpportunity[s.id]
                   ? `<a class="sc-find-link speculative-badge" style="border:none;text-decoration:underline;" href="opportunity.html?id=${signalToOpportunity[s.id]}">💡 Possible opportunity generated →</a>`

@@ -21,6 +21,10 @@ const EXPERIENCE_LABELS = {
   advanced: "Senior", any: "Any level",
 };
 const WORK_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
+const CATEGORY_GROUPS = {
+  jobs: ["full_time", "part_time", "contract", "internship", "apprenticeship", "seasonal", "volunteer"],
+  projects: ["project", "freelance", "gig", "one_time_task", "service_request"],
+};
 const GOV_LEVEL_LABELS = {
   central: "Central Govt", state: "State Govt", psu: "PSU", railways: "Railways", banking: "Banking",
   defence: "Defence", police: "Police", teaching: "Teaching", healthcare: "Healthcare",
@@ -62,12 +66,14 @@ function parseSearchQuery(raw) {
   let activeWorkMode = "";
   let activeExperience = "";
   let activeGovLevel = "";
+  let activeCategory = "";
   let searchTerm = "";
   let sortMode = "recommended";
   let myCapabilities = [];
   let mySavedIds = new Set();
   let currentUser = null;
   let myPreferences = null;
+  let myDna = null;
   let mapFilterIds = null; // Set of ids, or null = no map-cluster filter active
   let mapFilterLabel = "";
   let showSpeculative = false;
@@ -125,14 +131,19 @@ function parseSearchQuery(raw) {
     if (myCapabilities.length) {
       const m = matchScore(opp);
       if (m.matched.length) {
-        matchBadge = `<div style="font-size:0.7rem;color:#00ff00;font-weight:700;margin-bottom:0.3rem;text-shadow:0 0 6px #00ff00;">🎯 Matches your skills: ${escapeHtml(m.matched.join(", "))}</div>`;
+        matchBadge = `<div style="font-size:0.7rem;color:#7c8bff;font-weight:700;margin-bottom:0.3rem;">🎯 Matches your skills: ${escapeHtml(m.matched.join(", "))}</div>`;
       }
     }
     const fresh = freshness(opp);
     const applyHref = opp.source_type === "user" && opp.posted_by ? `profile.html?id=${opp.posted_by}` : opp.url || null;
     const applyLabel = opp.source_type === "user" ? "view poster →" : opp.status === "speculative" ? "read the signal →" : "view / apply →";
     const isSaved = mySavedIds.has(opp.id);
+    const dnaMatch = myDna ? window.OH_computeDnaScore(opp, myDna) : 0;
     div.innerHTML = `
+      ${dnaMatch >= 20 || opp.government_level ? `<div class="score-row">
+        ${dnaMatch >= 20 ? `<div class="score-pill match"><span class="sp-label">Match</span><span class="sp-value">${dnaMatch}%</span></div>` : ""}
+        ${window.OH_trustBadgeHtml ? window.OH_trustBadgeHtml(opp) : ""}
+      </div>` : ""}
       ${matchBadge}
       <div class="mc-title"><a href="opportunity.html?id=${opp.id}" style="text-decoration:none;color:inherit;">${escapeHtml(oppLabel(opp))}</a></div>
       <div class="mc-meta">
@@ -170,7 +181,10 @@ function parseSearchQuery(raw) {
       } catch (err) { alert("Could not update saved opportunities: " + (err.message || err)); }
     });
     const link = div.querySelector(".card-link");
-    if (link) link.addEventListener("click", (e) => e.stopPropagation());
+    if (link) link.addEventListener("click", (e) => {
+      e.stopPropagation();
+      window.OH_logEvent(currentUser && currentUser.id, opp.id, "apply_click");
+    });
     return div;
   }
 
@@ -201,6 +215,15 @@ function parseSearchQuery(raw) {
     if (activeWorkMode) list = list.filter((o) => o.work_mode === activeWorkMode);
     if (activeExperience) list = list.filter((o) => o.experience_level === activeExperience);
     if (activeGovLevel) list = list.filter((o) => o.government_level === activeGovLevel);
+    if (activeCategory === "government") {
+      list = list.filter((o) => !!o.government_level);
+    } else if (activeCategory === "funding") {
+      list = list.filter((o) => /grant|funding|invest/i.test(((o.title || "") + " " + (o.body || ""))));
+    } else if (activeCategory === "education") {
+      list = list.filter((o) => /scholarship|training/i.test(((o.title || "") + " " + (o.body || ""))));
+    } else if (CATEGORY_GROUPS[activeCategory]) {
+      list = list.filter((o) => CATEGORY_GROUPS[activeCategory].includes(o.opportunity_type));
+    }
     if (mapFilterIds) list = list.filter((o) => mapFilterIds.has(o.id));
     if (searchTerm) {
       const parsed = parseSearchQuery(searchTerm);
@@ -275,7 +298,7 @@ function parseSearchQuery(raw) {
       if (opp.latitude == null || opp.longitude == null) return;
       withCoords++;
       const marker = L.circleMarker([opp.latitude, opp.longitude], {
-        radius: 7, weight: 2, color: "#00ff00", fillColor: "#00ff00", fillOpacity: 0.75,
+        radius: 7, weight: 2, color: "#5b6ef5", fillColor: "#5b6ef5", fillOpacity: 0.75,
       }).bindPopup(popupHtml(opp));
       marker._ohId = opp.id;
       marker._ohLabel = opp.city || opp.location || opp.country || "this area";
@@ -355,6 +378,19 @@ function parseSearchQuery(raw) {
     } catch (err) { mount.innerHTML = ""; }
   }
 
+  function wireCategoryRow() {
+    const mount = document.getElementById("category-row");
+    if (!mount) return;
+    mount.querySelectorAll(".category-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        mount.querySelectorAll(".category-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        activeCategory = pill.dataset.category || "";
+        render();
+      });
+    });
+  }
+
   function wireChipRow(containerId, valueAttr, onPick) {
     const mount = document.getElementById(containerId);
     if (!mount) return;
@@ -424,6 +460,7 @@ function parseSearchQuery(raw) {
     try {
       const profile = await Auth.getProfile(currentUser.id);
       myPreferences = (profile && profile.preferences) || {};
+      myDna = profile && profile.onboarding_completed ? profile.dna : null;
     } catch { myPreferences = {}; }
   }
 
@@ -586,6 +623,7 @@ function parseSearchQuery(raw) {
 
     wireReportModal();
     wireSaveSearch();
+    wireCategoryRow();
     initMap();
     await loadMyCapabilities();
     // loadIndustries() runs inside applyIncomingState() so a saved search's
@@ -596,94 +634,13 @@ function parseSearchQuery(raw) {
   }
 
   // ---------- Foundation phase: DNA-based personalization ----------
-  // Exposed so index.html can reuse the same card renderer + already-fetched
-  // opportunity list for the personalized feed sections, instead of
-  // duplicating fetch/render logic. See computeDnaScore below.
+  // Exposed so index.html/leads.html can reuse the same card renderer +
+  // already-fetched opportunity list. Match/Quality/Confidence/trust-state
+  // scoring itself now lives in supabase-client.js (window.OH_computeDnaScore
+  // etc.) since every page needs it, not just this feed module.
   window.OH_renderCard = renderMiniCard;
   window.OH_getAllOpportunities = () => allOpps;
   window.OH_getCurrentUser = () => currentUser;
-
-  function dnaTokenize(str) {
-    if (!str) return [];
-    return String(str).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
-  }
-
-  // Lightweight, explainable heuristic — not a trained model. Keyword overlap
-  // between everything the user typed during onboarding (dna) and an
-  // opportunity's text, plus small bonuses for exact-match fields (location,
-  // work mode, government level), blended with the existing quality score.
-  // Deliberately simple per spec: "no big recommendation engine before data."
-  function computeDnaScore(opp, dna) {
-    if (!dna || !Object.keys(dna).length) return 0;
-    const profileWords = [];
-    const locations = [];
-    let workMode = null;
-    let govLevel = null;
-    Object.values(dna).forEach((fields) => {
-      if (!fields || typeof fields !== "object") return;
-      Object.keys(fields).forEach((fk) => {
-        const v = fields[fk];
-        if (typeof v !== "string" || !v) return;
-        if (fk === "work_mode") { workMode = v; return; }
-        if (fk === "government_level") { govLevel = v; return; }
-        if (["location", "state", "city", "region"].includes(fk)) { locations.push(v.toLowerCase()); return; }
-        profileWords.push(...dnaTokenize(v));
-      });
-    });
-
-    const oppText = [
-      opp.title, opp.body, opp.industries && opp.industries.name, opp.department,
-      Array.isArray(opp.skills) ? opp.skills.join(" ") : "",
-    ].filter(Boolean).join(" ");
-    const oppWords = new Set(dnaTokenize(oppText));
-    let overlap = 0;
-    profileWords.forEach((w) => { if (oppWords.has(w)) overlap++; });
-    const overlapRatio = profileWords.length ? overlap / profileWords.length : 0;
-    let keywordScore = Math.min(60, overlapRatio * 200);
-
-    let bonus = 0;
-    const oppLoc = (opp.city || opp.location || "").toLowerCase();
-    if (oppLoc && locations.some((l) => oppLoc.includes(l) || l.includes(oppLoc))) bonus += 15;
-    if (workMode && opp.work_mode && workMode === opp.work_mode) bonus += 10;
-    if (govLevel && opp.government_level && govLevel === opp.government_level) bonus += 15;
-
-    // If there's no keyword signal at all (e.g. user only picked selects),
-    // still let location/work-mode/government bonuses count, plus a small
-    // nod to the opportunity's own quality score so it isn't stuck at 0.
-    const qualityBlend = (opp.score || 0) * 0.15;
-    return Math.round(Math.min(100, keywordScore + bonus + qualityBlend));
-  }
-  window.OH_computeDnaScore = computeDnaScore;
-
-  // Short, human-readable reason a card matched — used for lightweight
-  // "why you're seeing this" annotations on personalized cards. Returns
-  // null when there's nothing worth saying (keeps things honest instead of
-  // forcing an explanation where there isn't a real match).
-  function explainDnaMatch(opp, dna) {
-    if (!dna || !Object.keys(dna).length) return null;
-    const words = [];
-    let workMode = null, govLevel = null;
-    Object.values(dna).forEach((fields) => {
-      if (!fields || typeof fields !== "object") return;
-      Object.keys(fields).forEach((fk) => {
-        const v = fields[fk];
-        if (typeof v !== "string" || !v) return;
-        if (fk === "work_mode") { workMode = v; return; }
-        if (fk === "government_level") { govLevel = v; return; }
-        words.push(...dnaTokenize(v));
-      });
-    });
-    const oppText = [opp.title, opp.body, opp.industries && opp.industries.name, opp.department].filter(Boolean).join(" ");
-    const oppWords = new Set(dnaTokenize(oppText));
-    const matched = [...new Set(words)].filter((w) => oppWords.has(w)).slice(0, 3);
-    const bits = [];
-    if (matched.length) bits.push(matched.join(", "));
-    if (workMode && opp.work_mode === workMode) bits.push(WORK_MODE_LABELS[workMode] || workMode);
-    if (govLevel && opp.government_level === govLevel) bits.push("your preferred government level");
-    if (!bits.length) return null;
-    return "Matches: " + bits.join(" · ");
-  }
-  window.OH_explainDnaMatch = explainDnaMatch;
 
   window.initOpportunitiesFeed = initOpportunitiesFeed;
 })();

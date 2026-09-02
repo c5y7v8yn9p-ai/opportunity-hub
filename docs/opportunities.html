@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="css/theme.css?v=5">
+<link rel="stylesheet" href="css/theme.css?v=6">
 </head>
 <body>
 
@@ -20,6 +20,15 @@
 
   <div class="section-title">Opportunities Database</div>
   <div class="section-sub">Every live listing — search, filter by industry, type, work mode, experience level and government category, or browse the map.</div>
+
+  <div class="category-row" id="category-row">
+    <span class="category-pill active" data-category="">All</span>
+    <span class="category-pill" data-category="jobs">Jobs</span>
+    <span class="category-pill" data-category="projects">Business</span>
+    <span class="category-pill" data-category="funding">Funding</span>
+    <span class="category-pill" data-category="education">Education</span>
+    <span class="category-pill" data-category="government">Government</span>
+  </div>
 
   <div class="map-shell">
     <div class="map-sidebar">
@@ -147,8 +156,8 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=5"></script>
-  <script src="js/opportunities-feed.js?v=3"></script>
+  <script src="js/supabase-client.js?v=6"></script>
+  <script src="js/opportunities-feed.js?v=4"></script>
   <script>
     renderNav("opportunities");
     // Saved-search deep links (?industry=&type=&mode=&exp=&q=&sort=&speculative=1)

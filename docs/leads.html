@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Leads</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=6">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="updated"><span class="dot"></span><span id="updated">connecting...</span></div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="section-title">Leads</div>
+  <div class="section-sub">Potential needs detected from today's signals — not confirmed postings. "They may need something," not "they're hiring." Verify directly before you reach out.</div>
+
+  <div class="container">
+    <div id="leads-list"><div class="loading">loading leads…</div></div>
+  </div>
+
+  <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=6"></script>
+  <script>
+    renderNav("leads");
+
+    function oppLabel(opp) { return opp.title || (opp.body || "").slice(0, 60) || "Potential need"; }
+
+    async function loadLeads() {
+      const mount = document.getElementById("leads-list");
+      if (!window.OH_CONFIGURED) { mount.innerHTML = '<div class="empty">Supabase isn\'t configured yet.</div>'; return; }
+
+      const user = await Auth.getUser();
+      const profile = user ? await Auth.getProfile(user.id) : null;
+      const dna = profile && profile.onboarding_completed ? profile.dna : null;
+
+      const { data, error } = await window.sb
+        .from("opportunities")
+        .select("*, industries:industry_id ( name )")
+        .eq("status", "speculative")
+        .order("created_at", { ascending: false })
+        .limit(60);
+
+      const updatedEl = document.getElementById("updated");
+      if (error || !data) {
+        if (updatedEl) updatedEl.textContent = "connection error";
+        mount.innerHTML = '<div class="empty">Could not load leads right now.</div>';
+        return;
+      }
+      if (updatedEl) updatedEl.textContent = "last updated: " + new Date().toLocaleString();
+
+      if (!data.length) {
+        mount.innerHTML = '<div class="empty">No leads detected right now — check back after the next daily signal refresh.</div>';
+        return;
+      }
+
+      const signalIds = data.map((o) => o.signal_id).filter(Boolean);
+      let signalsById = {};
+      if (signalIds.length) {
+        const { data: signals } = await window.sb
+          .from("news_items")
+          .select("id, title, url, source, published_at, signal_type, company")
+          .in("id", signalIds);
+        (signals || []).forEach((s) => { signalsById[s.id] = s; });
+      }
+
+      const scored = data.map((opp) => {
+        const dnaScore = dna ? window.OH_computeDnaScore(opp, dna) : 0;
+        const intent = Math.max(dnaScore, Math.round((opp.score || 40) * 0.7));
+        return { opp, intent, signal: opp.signal_id ? signalsById[opp.signal_id] : null };
+      }).sort((a, b) => b.intent - a.intent);
+
+      mount.innerHTML = `<div class="opp-grid">${scored.map((s) => `
+        <div class="opp-card">
+          <div class="intent-meter">
+            <span class="im-value">${s.intent}</span>
+            <span class="im-label">Intent</span>
+            <div class="intent-bar"><div class="intent-bar-fill" style="width:${Math.min(100, s.intent)}%"></div></div>
+          </div>
+          <div class="card-title"><a href="opportunity.html?id=${s.opp.id}">${escapeHtml(oppLabel(s.opp))}</a></div>
+          <div class="card-text">${escapeHtml([s.opp.industries && s.opp.industries.name, s.opp.city || s.opp.location].filter(Boolean).join(" · "))}</div>
+          ${s.signal ? `<div class="tech-label">EVIDENCE</div>${window.OH_evidenceChainHtml(s.signal)}` : ""}
+          <div class="card-footer" style="margin-top:0.7rem;">
+            ${window.OH_trustBadgeHtml(s.opp)}
+            <a class="card-link" href="opportunity.html?id=${s.opp.id}">View lead →</a>
+          </div>
+        </div>`).join("")}</div>`;
+    }
+
+    loadLeads();
+  </script>
+</body>
+</html>

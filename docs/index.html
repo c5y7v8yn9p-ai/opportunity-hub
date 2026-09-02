@@ -3,12 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpportunityHub // Feed</title>
+<title>OpportunityHub // Home</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="css/theme.css?v=5">
+<link rel="stylesheet" href="css/theme.css?v=6">
 </head>
 <body>
 
@@ -18,380 +15,227 @@
     <div id="site-nav"></div>
   </div>
 
-  <div class="value-prop">
-    <h2>FIND WHAT'S NEXT.</h2>
-    <div class="sub">Tell us what you're looking for. We'll find the opportunities that matter to you.</div>
-    <div class="hero-cta-row" id="hero-cta-row">
-      <a class="btn-primary" id="hero-cta-primary" href="onboarding.html">START FINDING OPPORTUNITIES →</a>
-      <a class="btn-secondary" id="hero-cta-secondary" href="#explore-title">EXPLORE WITHOUT PERSONALIZATION</a>
+  <div class="container narrow" style="margin-top:0.9rem;">
+    <input class="search-input" id="home-search" type="text" placeholder="What are you looking for?">
+  </div>
+
+  <div class="container narrow">
+    <div class="greeting-box" style="margin-left:0;margin-right:0;">
+      <h2 id="greeting-h2">Good morning.</h2>
+      <div class="greeting-sub" id="greeting-sub">Loading what deserves your attention…</div>
     </div>
   </div>
 
-  <div id="personalized-mount"></div>
-
-  <div class="section-title" id="signals-title">Today's Signals</div>
-  <div class="section-sub">Business, startup and employment activity from the last 24 hours — the news behind the opportunities below. <a href="signals.html">→ view all signals</a></div>
-  <div class="news-dashboard" id="news-dashboard">
-    <div class="news-columns">
-      <div class="news-column">
-        <div class="news-column-title">Business</div>
-        <div class="news-list" id="news-business"><span class="news-loading">loading…</span></div>
-      </div>
-      <div class="news-column">
-        <div class="news-column-title">Startup</div>
-        <div class="news-list" id="news-startup"><span class="news-loading">loading…</span></div>
-      </div>
-      <div class="news-column">
-        <div class="news-column-title">Employment</div>
-        <div class="news-list" id="news-employment"><span class="news-loading">loading…</span></div>
-      </div>
-    </div>
+  <div class="container narrow">
+    <div class="stat-tiles" id="stat-tiles" style="margin-left:0;margin-right:0;"></div>
   </div>
 
-  <div id="why-matters-mount"></div>
-
-  <div class="container">
-    <div class="paywall-box">
-      <div class="price-line">Free daily feed — or unlock the full firehose for ₹10/month</div>
-      <button class="btn-primary" id="subscribe-btn" onclick="startSubscription()">[ Subscribe — ₹10/month ]</button>
-    </div>
+  <div class="section-title">Your Best Opportunities</div>
+  <div class="container narrow">
+    <div class="opp-grid" id="best-opps"><div class="loading">loading…</div></div>
   </div>
 
-  <div class="section-title" id="explore-title">Opportunity Discovery</div>
-  <div class="section-sub">Search the live database below, or jump straight to the full tools.</div>
-  <div class="feed-cta">
-    <a class="btn-secondary" href="opportunities.html">→ Full Opportunities Database</a>
-    <a class="btn-secondary" href="signals.html">→ All Signals</a>
+  <div class="section-title">Today's Moves</div>
+  <div class="container narrow">
+    <div class="moves-list" id="moves-list" style="margin-left:0;margin-right:0;"></div>
   </div>
 
-  <div class="map-shell">
-    <div class="map-sidebar">
-      <div class="filter-bar">
-        <input class="search-input" id="search-input" type="text" placeholder="Try: remote video editing jobs">
-        <div class="filter-group">
-          <div class="filter-group-label">Industry</div>
-          <div class="chip-row" id="industry-chips"><span style="font-size:0.72rem;color:var(--ink-faint);">loading industries…</span></div>
-        </div>
-        <div class="filter-group">
-          <div class="filter-group-label">Work mode</div>
-          <div class="chip-row" id="workmode-chips">
-            <span class="chip active" data-mode="">All modes</span>
-            <span class="chip" data-mode="remote">Remote</span>
-            <span class="chip" data-mode="hybrid">Hybrid</span>
-            <span class="chip" data-mode="local">Local</span>
-          </div>
-        </div>
-        <select class="search-input" id="sort-select" style="margin-top:0.7rem;">
-          <option value="recommended">Sort: Recommended</option>
-          <option value="newest">Sort: Newest first</option>
-          <option value="score">Sort: Opportunity score</option>
-          <option value="match" id="match-option" style="display:none;">Sort: Best match for me</option>
-        </select>
-      </div>
-      <div class="results-count" id="results-count"></div>
-      <div class="results-count" id="map-filter-note" style="display:none;"></div>
-      <div class="map-sidebar-scroll" id="opportunities">
-        <div class="loading">loading opportunities…</div>
-      </div>
-    </div>
-    <div class="map-pane">
-      <div id="leaflet-map"></div>
-    </div>
+  <div class="section-title">Signals You Should Know</div>
+  <div class="container narrow">
+    <div class="category-row" id="signal-chips" style="margin-left:0;margin-right:0;"></div>
   </div>
 
-  <div class="report-modal" id="report-modal">
-    <div class="report-modal-box">
-      <div class="box-title" style="margin-top:0;">Report this opportunity</div>
-      <div class="form-row">
-        <label>Reason</label>
-        <select id="report-reason">
-          <option value="scam">Scam</option>
-          <option value="fake_job">Fake job</option>
-          <option value="misleading_salary">Misleading salary</option>
-          <option value="application_fee">Asks for an application fee</option>
-          <option value="illegal_activity">Illegal activity</option>
-          <option value="harassment">Harassment</option>
-          <option value="impersonation">Impersonation</option>
-          <option value="duplicate">Duplicate listing</option>
-          <option value="expired">Expired / no longer available</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Details (optional)</label>
-        <textarea id="report-details" maxlength="300"></textarea>
-      </div>
-      <div style="display:flex; gap:0.6rem;">
-        <button type="button" class="btn-primary" id="report-submit-btn" style="flex:1;">Submit report</button>
-        <button type="button" class="btn-secondary" id="report-cancel-btn">Cancel</button>
-      </div>
-      <div class="form-msg" id="report-msg"></div>
-    </div>
-  </div>
+  <div class="everything-else-link"><a href="opportunities.html">Everything else →</a></div>
 
   <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=5"></script>
-  <script src="js/opportunities-feed.js?v=3"></script>
+  <script src="js/supabase-client.js?v=6"></script>
   <script>
     renderNav("feed");
 
-    async function startSubscription() {
-      const user = await Auth.getUser();
-      if (!user) {
-        window.location.href = "auth.html?redirect=index.html";
-        return;
-      }
-      const btn = document.getElementById("subscribe-btn");
-      const original = btn.textContent;
-      btn.textContent = "connecting to razorpay...";
-      btn.disabled = true;
-      try {
-        const { data: sessionData } = await window.sb.auth.getSession();
-        const token = sessionData && sessionData.session ? sessionData.session.access_token : null;
-        if (!token) throw new Error("No active session — please log in again.");
-        const cfg = window.OPPORTUNITY_HUB_CONFIG;
-        const res = await fetch(`${cfg.SUPABASE_URL}/functions/v1/razorpay-create-subscription`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: cfg.SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || data.error) throw new Error(data.error || `request failed (${res.status})`);
-        window.location.href = data.short_url;
-      } catch (err) {
-        alert("Could not start subscription: " + err.message);
-        btn.textContent = original;
-        btn.disabled = false;
-      }
-    }
-
+    const WORK_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
     const SIGNAL_TYPE_LABELS = {
       funding: "Funding", hiring: "Hiring", layoff: "Layoffs", expansion: "Expansion",
       launch: "Launch", acquisition: "Acquisition", regulation: "Regulation",
       government: "Government", market: "Market", business: "Business", technology: "Tech", other: "Signal",
     };
+    const SEARCH_EXAMPLES = [
+      "What are you looking for?",
+      "Find remote AI jobs above $100k",
+      "Find government jobs I'm eligible for",
+      "Find companies that need video production",
+      "Find grants for my startup",
+      "Find tenders for my business",
+      "Find opportunities near me",
+    ];
 
-    let lastSignals = [];
-
-    async function loadNewsDashboard() {
-      if (!window.sb) return;
-      const categories = ["business", "startup", "employment"];
-      try {
-        const { data, error } = await window.sb
-          .from("news_items")
-          .select("category, title, url, source, published_at, signal_type, source_quality, importance_score, company, source_count")
-          .order("published_at", { ascending: false })
-          .limit(120);
-        if (error) throw error;
-        lastSignals = data || [];
-
-        const byCategory = { business: [], startup: [], employment: [] };
-        lastSignals.forEach((item) => {
-          if (byCategory[item.category]) byCategory[item.category].push(item);
-        });
-        categories.forEach((cat) => {
-          byCategory[cat].sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
-        });
-
-        categories.forEach((cat) => {
-          const mount = document.getElementById("news-" + cat);
-          const items = byCategory[cat].slice(0, 6);
-          if (!items.length) {
-            mount.innerHTML = '<span class="news-empty">no headlines yet — check back after the next daily refresh</span>';
-            return;
-          }
-          mount.innerHTML = items
-            .map((it) => {
-              const when = it.published_at ? timeAgo(it.published_at) : "";
-              const src = it.source ? escapeHtml(it.source) : "";
-              const qBadge = it.source_quality === "verified" ? '<span class="quality-badge verified">verified</span>' : "";
-              return (
-                '<a class="news-item" href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' +
-                '<span class="news-item-title">' + escapeHtml(it.title) + '</span>' +
-                '<span class="news-item-meta">' + src + (src && when ? " · " : "") + when + " " + qBadge + '</span>' +
-                '</a>'
-              );
-            })
-            .join("");
-        });
-
-        renderWhyMatters();
-      } catch (err) {
-        categories.forEach((cat) => {
-          document.getElementById("news-" + cat).innerHTML =
-            '<span class="news-empty">could not load news (' + escapeHtml(err.message || String(err)) + ')</span>';
-        });
-      }
+    function greetingWord() {
+      const h = new Date().getHours();
+      if (h < 12) return "Good morning.";
+      if (h < 18) return "Good afternoon.";
+      return "Good evening.";
     }
 
-    async function renderWhyMatters() {
-      const mount = document.getElementById("why-matters-mount");
-      const featured = lastSignals
-        .filter((s) => s.company)
-        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0))[0];
-      if (!featured || !window.sb) { mount.innerHTML = ""; return; }
-      try {
-        const q = featured.company;
-        const { data, error } = await window.sb
-          .from("opportunities")
-          .select("id", { count: "exact", head: false })
-          .eq("status", "active")
-          .ilike("title", `%${q}%`);
-        if (error) throw error;
-        const count = (data || []).length;
-        if (count === 0) { mount.innerHTML = ""; return; }
-        mount.innerHTML = `
-          <div class="why-matters-box">
-            <div class="wm-label">Why This Matters</div>
-            <div class="wm-signal">${escapeHtml(featured.title)}</div>
-            <div class="wm-explain">${escapeHtml(featured.company)} is in today's ${escapeHtml(SIGNAL_TYPE_LABELS[featured.signal_type] || "business")} signals — here's what's live in the opportunity database that mentions them.</div>
-            <div class="wm-stats"><div class="wm-stat"><b>${count}</b>related listing${count === 1 ? "" : "s"}</div></div>
-            <a class="btn-secondary" href="opportunities.html?q=${encodeURIComponent(q)}">View Opportunities →</a>
-          </div>`;
-      } catch (err) {
-        mount.innerHTML = "";
-      }
+    function oppLabel(opp) { return opp.title || (opp.body || "").slice(0, 60) || "Untitled opportunity"; }
+
+    function metaLine(opp) {
+      const bits = [];
+      if (opp.industries && opp.industries.name) bits.push(opp.industries.name);
+      if (opp.work_mode) bits.push(WORK_MODE_LABELS[opp.work_mode] || opp.work_mode);
+      if (opp.city || opp.location) bits.push(opp.city || opp.location);
+      if (opp.pay_min) {
+        const cur = opp.pay_currency || "INR";
+        bits.push(opp.pay_max && opp.pay_max !== opp.pay_min ? `${cur} ${opp.pay_min}–${opp.pay_max}` : `${cur} ${opp.pay_min}+`);
+      } else if (opp.money_mentioned) bits.push(opp.money_mentioned);
+      return bits.join(" · ");
     }
 
-    function humanizeIntents(intents) {
-      if (!intents || !intents.length) return "your interests";
-      return intents.map((k) => k.replace(/_/g, " ")).join(", ");
+    function bestCardHtml(opp, dna, match) {
+      const quality = window.OH_qualityBucket(opp);
+      const why = dna ? window.OH_whyListHtml(opp, dna) : "";
+      const applyHref = opp.source_type === "user" && opp.posted_by ? `profile.html?id=${opp.posted_by}` : opp.url;
+      const applyLabel = opp.source_type === "user" ? "View poster" : opp.status === "speculative" ? "Read the signal" : "Apply";
+      return `
+        <div class="opp-card">
+          <div class="score-row">
+            ${match >= 20 ? `<div class="score-pill match"><span class="sp-label">Match</span><span class="sp-value">${match}%</span></div>` : ""}
+            ${opp.status !== "speculative" ? `<div class="score-pill ${quality.cls}"><span class="sp-label">Quality</span><span class="sp-value">${quality.label}</span></div>` : ""}
+            ${window.OH_trustBadgeHtml(opp)}
+          </div>
+          <div class="card-title"><a href="opportunity.html?id=${opp.id}">${escapeHtml(oppLabel(opp))}</a></div>
+          <div class="card-text">${escapeHtml(metaLine(opp))}</div>
+          ${why ? `<div class="tech-label">WHY THIS MATCHES</div>${why}` : ""}
+          <div class="card-footer" style="margin-top:0.7rem;justify-content:flex-end;">
+            ${applyHref ? `<a class="btn-primary" data-apply-id="${opp.id}" href="${applyHref}" target="${opp.source_type === "user" ? "_self" : "_blank"}" rel="noopener">${applyLabel} →</a>` : ""}
+          </div>
+        </div>`;
     }
 
-    function renderPersonalizedSections(profile) {
-      const mount = document.getElementById("personalized-mount");
-      if (!mount || typeof window.OH_getAllOpportunities !== "function") return;
-      const allOpps = window.OH_getAllOpportunities();
-      if (!allOpps.length) { mount.innerHTML = ""; return; }
-      const dna = profile.dna || {};
-      const intents = profile.intents || [];
+    async function loadHome() {
+      const user = await Auth.getUser();
+      window.__ohUserId = user ? user.id : null;
+      const profile = user ? await Auth.getProfile(user.id) : null;
+      const dna = profile && profile.onboarding_completed ? profile.dna : null;
 
-      const scored = allOpps.map((o) => ({ opp: o, dnaScore: window.OH_computeDnaScore(o, dna) }));
-      const now = Date.now();
-      const isNew = (o) => o.created_at && now - new Date(o.created_at).getTime() < 3 * 86400000;
-      const isExpiringSoon = (o) =>
-        o.expires_at && new Date(o.expires_at).getTime() > now && new Date(o.expires_at).getTime() - now < 7 * 86400000;
+      document.getElementById("greeting-h2").textContent = greetingWord();
 
-      const topMatches = scored.filter((s) => s.dnaScore >= 25).sort((a, b) => b.dnaScore - a.dnaScore).slice(0, 6);
-      const topIds = new Set(topMatches.map((s) => s.opp.id));
-
-      const newForYou = scored
-        .filter((s) => !topIds.has(s.opp.id) && s.dnaScore >= 12 && isNew(s.opp))
-        .sort((a, b) => new Date(b.opp.created_at) - new Date(a.opp.created_at))
-        .slice(0, 6);
-      const newIds = new Set(newForYou.map((s) => s.opp.id));
-
-      const actNow = scored
-        .filter(
-          (s) =>
-            !topIds.has(s.opp.id) &&
-            !newIds.has(s.opp.id) &&
-            (isExpiringSoon(s.opp) || (s.opp.status === "speculative" && s.dnaScore >= 20))
-        )
-        .sort((a, b) => {
-          const ea = a.opp.expires_at ? new Date(a.opp.expires_at).getTime() : Infinity;
-          const eb = b.opp.expires_at ? new Date(b.opp.expires_at).getTime() : Infinity;
-          return ea - eb;
-        })
-        .slice(0, 6);
-      const actIds = new Set(actNow.map((s) => s.opp.id));
-
-      const outside = scored
-        .filter(
-          (s) =>
-            !topIds.has(s.opp.id) && !newIds.has(s.opp.id) && !actIds.has(s.opp.id) &&
-            s.dnaScore < 12 && (s.opp.score || 0) >= 60
-        )
-        .sort((a, b) => (b.opp.score || 0) - (a.opp.score || 0))
-        .slice(0, 4);
-
-      const sections = [
-        { key: "top", title: "🔥 TOP MATCHES", items: topMatches },
-        { key: "new", title: "⚡ NEW FOR YOU", items: newForYou },
-        { key: "act", title: "🚨 ACT NOW", items: actNow },
-        { key: "outside", title: "🌎 OUTSIDE YOUR USUAL SEARCH", items: outside },
-      ].filter((s) => s.items.length);
-
-      if (!sections.length) {
-        mount.innerHTML = `
-          <div class="why-matters-box">
-            <div class="wm-label">Why You're Seeing This</div>
-            <div class="wm-explain">Based on what you told us: ${escapeHtml(humanizeIntents(intents))}. We don't have strong matches yet — check back as new opportunities come in, or <a href="onboarding.html">refine your preferences →</a></div>
-          </div>`;
+      if (!window.OH_CONFIGURED) {
+        document.getElementById("greeting-sub").textContent = "Supabase isn't configured yet — see SETUP_GUIDE.md.";
         return;
       }
 
-      let html = `
-        <div class="why-matters-box">
-          <div class="wm-label">🧠 Why You're Seeing This</div>
-          <div class="wm-explain">Based on what you told us: ${escapeHtml(humanizeIntents(intents))}. <a href="onboarding.html">Edit your preferences →</a></div>
-          <div class="wm-stats">
-            <div class="wm-stat"><b>${topMatches.length}</b>high matches</div>
-            <div class="wm-stat"><b>${newForYou.length}</b>new for you</div>
-            <div class="wm-stat"><b>${actNow.length}</b>need action</div>
-          </div>
-        </div>`;
+      const { data, error } = await window.sb
+        .from("opportunities")
+        .select("*, profiles:posted_by ( username ), industries:industry_id ( name )")
+        .in("status", ["active", "speculative"])
+        .order("created_at", { ascending: false })
+        .limit(300);
 
-      sections.forEach((s) => {
-        html += `<div class="section-title">${s.title}</div><div class="opp-grid" id="personalized-${s.key}"></div>`;
-      });
-      mount.innerHTML = html;
-
-      sections.forEach((s) => {
-        const grid = document.getElementById("personalized-" + s.key);
-        s.items.forEach((item) => {
-          const card = window.OH_renderCard(item.opp);
-          let why = null;
-          if (s.key === "top" || s.key === "new") {
-            why = window.OH_explainDnaMatch(item.opp, dna);
-          } else if (s.key === "act") {
-            why = isExpiringSoon(item.opp) ? "⏰ Closing soon" : "💡 Early signal — verify directly before acting";
-          } else if (s.key === "outside") {
-            why = "🌎 High quality pick outside your usual search";
-          }
-          if (why) {
-            const whyEl = document.createElement("div");
-            whyEl.className = "card-why";
-            whyEl.textContent = why;
-            card.appendChild(whyEl);
-          }
-          grid.appendChild(card);
-        });
-      });
-    }
-
-    async function initPersonalization(feedReadyPromise) {
-      const primary = document.getElementById("hero-cta-primary");
-      if (!window.sb) return;
-      try {
-        const user = await Auth.getUser();
-        if (!user) return;
-        const profile = await Auth.getProfile(user.id);
-        if (!profile || !profile.onboarding_completed) return;
-
-        if (primary) {
-          primary.textContent = "VIEW YOUR MATCHES →";
-          primary.href = "#personalized-mount";
-        }
-
-        await feedReadyPromise;
-        renderPersonalizedSections(profile);
-      } catch (err) {
-        /* leave default state on any error */
+      const updatedEl = document.getElementById("updated");
+      if (error || !data) {
+        if (updatedEl) updatedEl.textContent = "connection error";
+        document.getElementById("greeting-sub").textContent = "Could not load opportunities right now.";
+        return;
       }
+      if (updatedEl) updatedEl.textContent = "last updated: " + new Date().toLocaleString();
+
+      const activeOnly = data.filter((o) => o.status === "active");
+      const now = Date.now();
+      const scored = data.map((o) => ({ opp: o, match: dna ? window.OH_computeDnaScore(o, dna) : 0 }));
+      const rank = (s) => (dna ? s.match : s.opp.score || 0);
+      const isNew = (o) => o.created_at && now - new Date(o.created_at).getTime() < 3 * 86400000;
+
+      const best = scored.filter((s) => s.opp.status !== "speculative").slice().sort((a, b) => rank(b) - rank(a)).slice(0, 2);
+      const leads = scored.filter((s) => s.opp.status === "speculative" && (!dna || s.match >= 15)).sort((a, b) => rank(b) - rank(a));
+      const fresh = scored.filter((s) => isNew(s.opp) && s.opp.status !== "speculative").sort((a, b) => new Date(b.opp.created_at) - new Date(a.opp.created_at));
+
+      const newCount = fresh.length;
+      const matchCount = dna ? scored.filter((s) => s.match >= 25).length : activeOnly.length;
+      const urgentCount = leads.length;
+
+      document.getElementById("greeting-sub").textContent = dna
+        ? `You have ${matchCount} opportunit${matchCount === 1 ? "y" : "ies"} worth your attention.`
+        : user
+        ? `${activeOnly.length} opportunities are live right now. Finish onboarding to get personal matches.`
+        : `${activeOnly.length} opportunities are live right now. Tell us what you're looking for to get personal matches.`;
+
+      document.getElementById("stat-tiles").innerHTML = dna
+        ? `<div class="stat-tile match"><div class="st-value">${matchCount}</div><div class="st-label">Match</div></div>
+           <div class="stat-tile"><div class="st-value">${newCount}</div><div class="st-label">New</div></div>
+           <div class="stat-tile urgent"><div class="st-value">${urgentCount}</div><div class="st-label">Leads</div></div>`
+        : `<div class="stat-tile"><div class="st-value">${activeOnly.length}</div><div class="st-label">Live</div></div>
+           <div class="stat-tile"><div class="st-value">${newCount}</div><div class="st-label">New</div></div>
+           <div class="stat-tile urgent"><div class="st-value">${urgentCount}</div><div class="st-label">Leads</div></div>`;
+
+      const bestMount = document.getElementById("best-opps");
+      if (!best.length) {
+        bestMount.innerHTML = '<div class="empty">No opportunities yet — check back soon.</div>';
+      } else {
+        bestMount.innerHTML = best.map((s) => bestCardHtml(s.opp, dna, s.match)).join("");
+        bestMount.querySelectorAll("[data-apply-id]").forEach((el) => {
+          el.addEventListener("click", () => window.OH_logEvent(window.__ohUserId, el.dataset.applyId, "apply_click"));
+        });
+      }
+
+      const moves = [];
+      if (best[0]) moves.push({ verb: "Apply", opp: best[0].opp, meta: dna ? `${best[0].match}% match` : "top pick today" });
+      if (leads[0] && (!best[0] || leads[0].opp.id !== best[0].opp.id)) moves.push({ verb: "Contact", opp: leads[0].opp, meta: "high-intent lead" });
+      if (fresh[0] && !moves.some((m) => m.opp.id === fresh[0].opp.id)) moves.push({ verb: "Watch", opp: fresh[0].opp, meta: "new today" });
+      const usedIds = new Set(moves.map((m) => m.opp.id));
+      const exploreCandidate = scored.filter((s) => !usedIds.has(s.opp.id) && s.opp.status !== "speculative").sort((a, b) => (b.opp.score || 0) - (a.opp.score || 0))[0];
+      if (exploreCandidate) moves.push({ verb: "Explore", opp: exploreCandidate.opp, meta: "worth a look" });
+
+      const movesMount = document.getElementById("moves-list");
+      if (!moves.length) {
+        movesMount.innerHTML = '<div class="moves-done">You\'re caught up.</div>';
+      } else {
+        movesMount.innerHTML = moves
+          .map(
+            (m, i) => `
+          <a class="moves-item" href="opportunity.html?id=${m.opp.id}">
+            <span class="moves-num">${String(i + 1).padStart(2, "0")}</span>
+            <span class="moves-verb">${m.verb}</span>
+            <span class="moves-body">
+              <div class="moves-title">${escapeHtml(oppLabel(m.opp))}</div>
+              <div class="moves-meta">${escapeHtml(m.meta)}</div>
+            </span>
+          </a>`
+          )
+          .join("");
+      }
+
+      try {
+        const { data: signals } = await window.sb
+          .from("news_items")
+          .select("signal_type")
+          .order("published_at", { ascending: false })
+          .limit(60);
+        const counts = {};
+        (signals || []).forEach((s) => { counts[s.signal_type] = (counts[s.signal_type] || 0) + 1; });
+        const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        document.getElementById("signal-chips").innerHTML = top
+          .map(([type]) => `<a class="category-pill" href="signals.html">${escapeHtml(SIGNAL_TYPE_LABELS[type] || type)}</a>`)
+          .join("");
+      } catch (err) { /* signals teaser is optional */ }
     }
 
-    loadNewsDashboard();
-    const feedReady = initOpportunitiesFeed();
-    initPersonalization(feedReady);
+    let exIdx = 0;
+    setInterval(() => {
+      exIdx = (exIdx + 1) % SEARCH_EXAMPLES.length;
+      const input = document.getElementById("home-search");
+      if (input && document.activeElement !== input && !input.value) input.placeholder = SEARCH_EXAMPLES[exIdx];
+    }, 3200);
+
+    document.getElementById("home-search").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const q = e.target.value.trim();
+        window.location.href = q ? "opportunities.html?q=" + encodeURIComponent(q) : "opportunities.html";
+      }
+    });
+
+    loadHome();
   </script>
 </body>
 </html>

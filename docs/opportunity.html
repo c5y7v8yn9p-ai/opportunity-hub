@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Opportunity</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=5">
+<link rel="stylesheet" href="css/theme.css?v=6">
 </head>
 <body>
 
@@ -22,7 +22,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=5"></script>
+  <script src="js/supabase-client.js?v=6"></script>
   <script>
     renderNav("opportunities");
 
@@ -34,10 +34,9 @@
     };
     const WORK_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
     const EXPERIENCE_LABELS = { no_experience: "No experience required", beginner: "Entry level", intermediate: "Mid level", advanced: "Senior level", any: "Any level" };
-    const SIGNAL_TYPE_LABELS = {
-      funding: "Funding", hiring: "Hiring", layoff: "Layoffs", expansion: "Expansion",
-      launch: "Launch", acquisition: "Acquisition", regulation: "Regulation",
-      government: "Government", market: "Market", business: "Business", technology: "Tech", other: "Signal",
+    const GOV_LEVEL_LABELS = {
+      central: "Central Govt", state: "State Govt", psu: "PSU", railways: "Railways", banking: "Banking",
+      defence: "Defence", police: "Police", teaching: "Teaching", healthcare: "Healthcare", administrative: "Administrative", other: "Other Govt",
     };
 
     // Some scraped job-board descriptions embed raw HTML (e.g. "<div
@@ -47,43 +46,6 @@
       const div = document.createElement("div");
       div.innerHTML = html || "";
       return (div.textContent || div.innerText || "").replace(/\s+\n/g, "\n").trim();
-    }
-
-    function scoreBadge(score, status) {
-      if (status === "speculative") return "";
-      const s = score || 0;
-      const cls = s >= 70 ? "high" : s >= 40 ? "mid" : "low";
-      return `<span class="score-badge ${cls}" title="Rule-based: freshness, completeness, credibility — not AI">OPPORTUNITY SCORE ${s}/100</span>`;
-    }
-
-    // ---------- Foundation phase: lightweight "why this might matter" ----------
-    function dnaTokenizeLocal(str) {
-      if (!str) return [];
-      return String(str).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
-    }
-
-    function explainWhyForDetail(opp, dna) {
-      const words = [];
-      let workMode = null, govLevel = null;
-      Object.values(dna || {}).forEach((fields) => {
-        if (!fields || typeof fields !== "object") return;
-        Object.keys(fields).forEach((fk) => {
-          const v = fields[fk];
-          if (typeof v !== "string" || !v) return;
-          if (fk === "work_mode") { workMode = v; return; }
-          if (fk === "government_level") { govLevel = v; return; }
-          words.push(...dnaTokenizeLocal(v));
-        });
-      });
-      const oppText = [opp.title, opp.body, opp.industries && opp.industries.name, opp.department].filter(Boolean).join(" ");
-      const oppWords = new Set(dnaTokenizeLocal(oppText));
-      const matched = [...new Set(words)].filter((w) => oppWords.has(w)).slice(0, 3);
-      const bits = [];
-      if (matched.length) bits.push("mentions " + matched.join(", "));
-      if (workMode && opp.work_mode === workMode) bits.push((WORK_MODE_LABELS[workMode] || workMode) + " work matches what you're looking for");
-      if (govLevel && opp.government_level === govLevel) bits.push("matches your preferred government level");
-      if (!bits.length) return null;
-      return bits.join(". ") + ".";
     }
 
     async function loadDetail() {
@@ -127,6 +89,10 @@
       const user = await Auth.getUser();
       const savedIds = user ? await Auth.getSavedIds(user.id) : new Set();
       const isSaved = savedIds.has(opp.id);
+      const profile = user ? await Auth.getProfile(user.id) : null;
+      const dna = profile && profile.onboarding_completed ? profile.dna : null;
+
+      window.OH_logEvent(user && user.id, opp.id, "view");
 
       const specBanner = opp.status === "speculative" ? `
         <div class="speculative-banner">
@@ -134,16 +100,42 @@
           Nobody has posted this opportunity; verify directly with the company before acting on it.
         </div>` : "";
 
+      // Government listings get a trust-first treatment (spec section 17):
+      // the futuristic scoring/why-list still surrounds it, but the core
+      // facts are plain and undecorated. We only show fields we actually
+      // have — no invented vacancy counts or eligibility text.
+      const govBlock = opp.government_level ? `
+        <div class="detail-section">
+          <div class="detail-section-label">Government Opportunity — ${escapeHtml(GOV_LEVEL_LABELS[opp.government_level] || opp.government_level)}</div>
+          <div class="score-row">${window.OH_trustBadgeHtml(opp)}</div>
+          ${opp.department ? `<div class="detail-body" style="margin-top:0.4rem;"><b>Department:</b> ${escapeHtml(opp.department)}</div>` : ""}
+          <div class="last-checked">Last checked ${opp.last_verified_at ? timeAgo(opp.last_verified_at) : (opp.created_at ? timeAgo(opp.created_at) : "unknown")}</div>
+        </div>` : "";
+
+      const scoreRow = `
+        <div class="score-row">
+          ${dna ? (() => { const m = window.OH_computeDnaScore(opp, dna); return m > 0 ? `<div class="score-pill match"><span class="sp-label">Match</span><span class="sp-value">${m}%</span></div>` : ""; })() : ""}
+          ${(() => { const q = window.OH_qualityBucket(opp); return opp.status === "speculative" ? "" : `<div class="score-pill ${q.cls}"><span class="sp-label">Quality</span><span class="sp-value">${q.label}</span></div>`; })()}
+          <div class="score-pill"><span class="sp-label">Confidence</span><span class="sp-value">${window.OH_computeConfidence(opp)}%</span></div>
+        </div>
+        <div class="score-row">${window.OH_trustBadgeHtml(opp)}</div>
+      `;
+
+      const whyList = dna ? window.OH_whyListHtml(opp, dna) : "";
+
       mount.innerHTML = `
         <div class="detail-box">
           ${specBanner}
           <div class="detail-title">${escapeHtml(opp.title || "Untitled opportunity")}</div>
           <div class="detail-sub">${escapeHtml(opp.source || (opp.profiles ? "Posted by " + opp.profiles.username : ""))} · ${opp.created_at ? timeAgo(opp.created_at) : ""}</div>
+          ${scoreRow}
+          ${whyList ? `<div class="detail-section-label">Why This Matches</div>${whyList}` : ""}
           <div class="detail-meta-row">
-            ${scoreBadge(opp.score, opp.status)}
             ${metaChips.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
             ${payLine ? `<span class="tag accent">${escapeHtml(payLine)}</span>` : ""}
           </div>
+
+          ${govBlock}
 
           <div class="detail-section">
             <div class="detail-section-label">Description</div>
@@ -157,7 +149,7 @@
           </div>` : ""}
 
           <div class="detail-actions">
-            ${applyHref ? `<a class="btn-primary" href="${applyHref}" target="${opp.source_type === "user" ? "_self" : "_blank"}" rel="noopener">${applyLabel} →</a>` : ""}
+            ${applyHref ? `<a class="btn-primary" id="apply-link" href="${applyHref}" target="${opp.source_type === "user" ? "_self" : "_blank"}" rel="noopener">${applyLabel} →</a>` : ""}
             <button type="button" class="btn-secondary" id="save-detail-btn">${isSaved ? "★ Saved" : "☆ Save"}</button>
           </div>
 
@@ -165,6 +157,9 @@
           <div class="detail-section" id="related-opps-mount"></div>
         </div>
       `;
+
+      const applyLink = document.getElementById("apply-link");
+      if (applyLink) applyLink.addEventListener("click", () => window.OH_logEvent(user && user.id, opp.id, "apply_click"));
 
       document.getElementById("save-detail-btn").addEventListener("click", async () => {
         if (!user) { Auth.requireLogin(); return; }
@@ -182,38 +177,19 @@
         } catch (err) { alert("Could not update: " + (err.message || err)); }
       });
 
-      if (user) {
-        try {
-          const profile = await Auth.getProfile(user.id);
-          if (profile && profile.onboarding_completed && profile.dna) {
-            const why = explainWhyForDetail(opp, profile.dna);
-            if (why) {
-              const metaRow = mount.querySelector(".detail-meta-row");
-              if (metaRow) {
-                const holder = document.createElement("div");
-                holder.className = "why-matters-box";
-                holder.style.margin = "0.9rem 0";
-                holder.innerHTML = `<div class="wm-label">🧠 Why This Might Matter To You</div><div class="wm-explain">${escapeHtml(why)}</div>`;
-                metaRow.insertAdjacentElement("afterend", holder);
-              }
-            }
-          }
-        } catch (err) { /* silent — annotation is a nice-to-have, not critical */ }
-      }
-
       if (opp.signal_id) {
         const { data: signal } = await window.sb
           .from("news_items")
-          .select("title, url, category, signal_type, source, published_at")
+          .select("title, url, category, signal_type, source, company, published_at")
           .eq("id", opp.signal_id)
           .maybeSingle();
         if (signal) {
           document.getElementById("related-signal-mount").innerHTML = `
             <div class="detail-section-label">Related Signal</div>
-            <div class="signal-card">
+            ${window.OH_evidenceChainHtml(signal)}
+            <div class="signal-card" style="margin-top:0.6rem;">
               <div class="sc-title"><a href="${escapeHtml(signal.url)}" target="_blank" rel="noopener">${escapeHtml(signal.title)}</a></div>
               <div class="sc-meta">
-                <span class="tag accent">${escapeHtml(SIGNAL_TYPE_LABELS[signal.signal_type] || "Signal")}</span>
                 <span class="news-item-meta">${escapeHtml(signal.source || "")} · ${signal.published_at ? timeAgo(signal.published_at) : ""}</span>
               </div>
             </div>`;
@@ -223,7 +199,7 @@
       if (opp.industry_id) {
         const { data: related } = await window.sb
           .from("opportunities")
-          .select("id, title, work_mode, city, location, score")
+          .select("id, title, work_mode, city, location, score, status")
           .eq("industry_id", opp.industry_id)
           .eq("status", "active")
           .neq("id", opp.id)
@@ -237,7 +213,6 @@
                 <div class="mini-card" style="cursor:default;">
                   <div class="mc-title"><a href="opportunity.html?id=${r.id}" style="text-decoration:none;color:inherit;">${escapeHtml(r.title)}</a></div>
                   <div class="mc-meta">
-                    ${scoreBadge(r.score, r.status)}
                     ${r.work_mode ? `<span class="tag">${escapeHtml(WORK_MODE_LABELS[r.work_mode] || r.work_mode)}</span>` : ""}
                     ${r.city || r.location ? `<span class="tag">${escapeHtml(r.city || r.location)}</span>` : ""}
                   </div>
