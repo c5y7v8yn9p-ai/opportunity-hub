@@ -294,6 +294,99 @@ a { color: #00ff00; }
 .stars .off { opacity: 0.25; }
 .rating-item { border-bottom: 1px dotted rgba(0,255,0,0.4); padding: 0.6rem 0; font-size: 0.8rem; }
 
+/* ---------- value proposition / homepage hierarchy ---------- */
+.value-prop { text-align: center; margin: 1rem 0.6rem 0.2rem; position: relative; z-index: 10; }
+.value-prop h2 { font-size: clamp(1.1rem, 3vw, 1.5rem); letter-spacing: 1.5px; text-shadow: 0 0 8px #00ff00; }
+.value-prop .sub { font-size: 0.8rem; opacity: 0.78; margin-top: 0.55rem; max-width: 640px; margin-left: auto; margin-right: auto; }
+
+.section-title {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.5px; margin: 1.4rem 0.6rem 0.6rem;
+  text-transform: uppercase; opacity: 0.9;
+}
+.section-title::before { content: "▸ "; }
+.section-sub { font-size: 0.72rem; opacity: 0.6; margin: -0.3rem 0.6rem 0.7rem; }
+
+/* ---------- why this matters ---------- */
+.why-matters-box {
+  border: 1px dashed #00ff00; background: rgba(0,255,0,0.05);
+  margin: 0.6rem; padding: 1rem 1.1rem; font-size: 0.82rem;
+}
+.why-matters-box .wm-label {
+  font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  opacity: 0.75; margin-bottom: 0.4rem;
+}
+.why-matters-box .wm-signal { font-weight: 700; margin-bottom: 0.5rem; }
+.why-matters-box .wm-explain { opacity: 0.85; margin-bottom: 0.7rem; }
+.wm-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.7rem; }
+.wm-stat {
+  border: 1px solid rgba(0,255,0,0.6); padding: 0.3rem 0.6rem; font-size: 0.7rem;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.wm-stat b { font-size: 0.85rem; display: block; }
+
+/* ---------- opportunity score badge ---------- */
+.score-badge {
+  border: 1px solid rgba(0,255,0,0.6); padding: 0.15rem 0.5rem; font-size: 0.66rem;
+  text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+}
+.score-badge.high { border-color: #00ff00; color: #00ff00; box-shadow: 0 0 6px rgba(0,255,0,0.5); font-weight: 700; }
+.score-badge.mid { border-color: rgba(0,255,0,0.6); color: #00ff00; }
+.score-badge.low { border-color: rgba(0,255,0,0.35); color: rgba(0,255,0,0.6); }
+
+/* ---------- signal cards (/signals.html) ---------- */
+.signal-card {
+  border: 1px solid rgba(0,255,0,0.6); padding: 0.9rem 1rem; margin-bottom: 0.65rem;
+  background: transparent;
+}
+.signal-card:hover { background: rgba(0,255,0,0.04); }
+.signal-card .sc-title { font-weight: 700; font-size: 0.85rem; line-height: 1.4; margin-bottom: 0.4rem; }
+.signal-card .sc-title a { text-decoration: none; color: inherit; }
+.signal-card .sc-title a:hover { text-shadow: 0 0 8px #00ff00; }
+.signal-card .sc-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem; }
+.quality-badge { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; }
+.quality-badge.verified { opacity: 1; color: #00ff00; }
+.quality-badge.verified::before { content: "✓ "; }
+.sc-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.sc-find-link { font-size: 0.74rem; text-decoration: none; border-bottom: 1px dotted #00ff00; }
+.sc-find-link:hover { text-shadow: 0 0 8px #00ff00; }
+.sources-count { font-size: 0.64rem; opacity: 0.55; }
+
+/* ---------- filter dimension groups ---------- */
+.filter-group { margin-top: 0.85rem; }
+.filter-group-label { font-size: 0.62rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.3rem; }
+
+/* ---------- save button ---------- */
+.save-btn {
+  font-size: 0.66rem; color: rgba(0,255,0,0.7); background: none; border: 1px solid rgba(0,255,0,0.5);
+  cursor: pointer; font-family: inherit; padding: 0.2rem 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.save-btn:hover { background: rgba(0,255,0,0.12); }
+.save-btn.saved { background: #00ff00; color: #000; font-weight: 700; border-color: #00ff00; }
+
+/* ---------- feed page CTA / preview ---------- */
+.feed-cta { text-align: center; margin: 1rem 0.6rem 0.4rem; }
+.feed-cta .btn-secondary { margin: 0 0.4rem; }
+
+/* ---------- opportunity detail page ---------- */
+.detail-box { border: 2px solid #00ff00; background: rgba(0,255,0,0.02); margin: 0.6rem; padding: 1.4rem; }
+.detail-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.3rem; text-shadow: 0 0 6px #00ff00; }
+.detail-sub { font-size: 0.78rem; opacity: 0.7; margin-bottom: 0.9rem; }
+.detail-meta-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.detail-section { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px dotted rgba(0,255,0,0.4); }
+.detail-section-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.4rem; }
+.detail-body { font-size: 0.85rem; line-height: 1.65; opacity: 0.9; white-space: pre-wrap; }
+.detail-actions { display: flex; gap: 0.7rem; margin-top: 1.2rem; flex-wrap: wrap; }
+.related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; margin-top: 0.6rem; }
+
+/* ---------- leaflet marker cluster theme override ---------- */
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+  background-color: rgba(0,255,0,0.15) !important;
+}
+.marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+  background-color: rgba(0,255,0,0.55) !important; color: #000 !important; font-weight: 700 !important;
+  font-family: 'Courier Prime', monospace !important;
+}
+
 footer { text-align: center; font-size: 0.68rem; opacity: 0.5; padding: 2rem 1rem 1rem; position: relative; z-index: 10; letter-spacing: 0.5px; }
 
 @media (max-width: 600px) {

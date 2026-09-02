@@ -95,6 +95,102 @@ NEWS_DASHBOARD_QUERIES = {
 }
 NEWS_ITEMS_PER_CATEGORY = 8
 
+# Outlets we recognize as established news organizations — shown as a
+# "verified" source-quality badge on the /signals page. This is a coarse,
+# hand-maintained allowlist, not a real credibility system; anything not
+# listed here just shows as "unverified" (which does NOT mean untrustworthy,
+# only "we don't recognize this outlet yet").
+KNOWN_QUALITY_SOURCES = {
+    "the times of india", "times of india", "the hindu", "hindustan times",
+    "business standard", "moneycontrol.com", "moneycontrol", "the economic times",
+    "economic times", "livemint", "mint", "financial express", "the tribune",
+    "reuters", "press trust of india", "pti", "ani", "bloomberg", "bloombergquint",
+    "cnbc", "cnbc-tv18", "the indian express", "indian express", "ndtv",
+    "the wire", "scroll.in", "yourstory", "inc42", "entrackr", "vccircle",
+    "forbes india", "business today", "outlook business", "the print",
+    "millenniumpost", "storyboard18",
+}
+
+# Keyword -> signal_type classification. Checked in this order (first match
+# wins) against the lowercased title+summary. Deliberately simple/rule-based,
+# not ML — good enough to sort "TCS wins Rs 2,000cr deal" from "Oracle may
+# cut jobs" without pretending to be smarter than it is.
+SIGNAL_TYPE_RULES = [
+    ("funding", ["raises", "funding round", "pre-seed", "pre series", "series a",
+                 "series b", "series c", "seed round", "crore in", "million in",
+                 "valuation", "venture capital", "investors"]),
+    ("layoff", ["layoff", "lay off", "laid off", "job cuts", "workforce reduction",
+                "retrench"]),
+    ("acquisition", ["acquire", "acquisition", "acquires", "acquired", "merger",
+                      "to buy", "takeover"]),
+    ("hiring", ["hiring", "recruitment", "vacancy", "vacancies", "job openings",
+                "walk-in interview", "recruitment 2026", "recruitment drive"]),
+    ("expansion", ["expansion", "expands", "expanding", "to open", "new plant",
+                    "new facility", "scale up", "scale manufacturing"]),
+    ("launch", ["launches", "launch of", "unveils", "rolls out", "introduces"]),
+    ("regulation", ["rbi", "sebi", "regulation", "compliance", "ministry",
+                     "policy", "notification", "gazette"]),
+    ("government", ["government", "govt", "india post", "psu", "public sector",
+                     "cabinet approves"]),
+    ("market", ["sensex", "nifty", "stock market", "shares", "stocks", "ipo",
+                 "market cap", "rupee", "gdp"]),
+]
+
+
+def classify_signal(title, summary):
+    text = f"{title} {summary}".lower()
+    for signal_type, keywords in SIGNAL_TYPE_RULES:
+        if any(kw in text for kw in keywords):
+            return signal_type
+    return "business"
+
+
+def guess_source_quality(source_name):
+    return "verified" if (source_name or "").strip().lower() in KNOWN_QUALITY_SOURCES else "unverified"
+
+
+def guess_company(title):
+    """Best-effort: the capitalized word/phrase before a common signal verb
+    ('X Raises...', 'Y Acquires...', 'Z Launches...'). Returns None rather
+    than guessing wrong — this is a nice-to-have, not load-bearing."""
+    m = re.match(
+        r"^([A-Z][A-Za-z0-9&.\-]*(?:\s+[A-Z][A-Za-z0-9&.\-]*){0,3})\s+"
+        r"(raises|acquires|launches|unveils|expands|hires|lays off|wins|signs|"
+        r"partners|opens|closes|cuts|announces)",
+        title.strip(),
+    )
+    return m.group(1).strip() if m else None
+
+
+def normalize_title(title):
+    """Collapse near-duplicate headlines from different outlets down to a
+    comparable key: lowercase, drop the trailing ' - Source Name', strip
+    punctuation/whitespace differences."""
+    t = re.sub(r"\s+-\s+[^-]{2,40}$", "", title or "")  # strip " - Outlet"
+    t = re.sub(r"[^a-z0-9 ]", " ", t.lower())
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def score_opportunity(it):
+    """Rule-based 0-100 'Opportunity Score' — freshness/completeness/
+    credibility proxies, deliberately simple and explainable. NOT an AI
+    score; never label it as one in the UI."""
+    score = 20  # baseline: it made it into the feed at all
+    if it.get("pay_min") or it.get("money_mentioned"):
+        score += 20
+    if it.get("geo_city") or it.get("location"):
+        score += 15
+    if it.get("industry_guess"):
+        score += 15
+    if it.get("opportunity_type") and it.get("opportunity_type") not in (None, "gig", "project"):
+        score += 10
+    engagement = it.get("engagement") or 0
+    score += min(15, engagement // 20)  # up to +15 for well-engaged HN/source items
+    if len(it.get("title") or "") > 12:
+        score += 5
+    return max(0, min(100, score))
+
 
 
 def extract_details(text):
@@ -199,8 +295,10 @@ def fetch_news_dashboard():
 
     items = []
     seen_urls = set()
+    seen_titles = {}  # normalized title -> item dict already added to category_items
     for category, queries in NEWS_DASHBOARD_QUERIES.items():
         category_items = []
+        norm_index = {}
         for q in queries:
             url = f"https://news.google.com/rss/search?q={requests.utils.quote(q)}&hl=en-IN&gl=IN&ceid=IN:en"
             try:
@@ -224,21 +322,53 @@ def fetch_news_dashboard():
                         except Exception:
                             published_at = None
                     seen_urls.add(link)
-                    category_items.append({
+
+                    # Dedup: the same event reported by several outlets ends up
+                    # as one canonical signal with a source_count, instead of
+                    # N near-identical rows in the feed.
+                    norm = normalize_title(title)
+                    if norm in norm_index:
+                        norm_index[norm]["source_count"] += 1
+                        continue
+
+                    signal_type = classify_signal(title, desc)
+                    row = {
                         "category": category,
                         "title": title,
                         "summary": desc[:280],
                         "url": link,
                         "source": source_name,
                         "published_at": published_at,
-                    })
+                        "signal_type": signal_type,
+                        "company": guess_company(title),
+                        "source_quality": guess_source_quality(source_name),
+                        "source_count": 1,
+                    }
+                    norm_index[norm] = row
+                    category_items.append(row)
             except Exception as e:
                 print(f"[NewsDashboard] skipped query '{q}' ({category}): {e}", file=sys.stderr)
+
+        # importance_score: rule-based, favors signals reported by multiple
+        # outlets, verified sources, and higher-signal categories (funding /
+        # acquisition / layoff tend to matter more than routine market noise).
+        HIGH_VALUE_TYPES = {"funding", "acquisition", "layoff", "expansion", "hiring"}
+        for row in category_items:
+            imp = 30
+            imp += min(30, (row["source_count"] - 1) * 15)
+            if row["source_quality"] == "verified":
+                imp += 20
+            if row["signal_type"] in HIGH_VALUE_TYPES:
+                imp += 20
+            row["importance_score"] = max(0, min(100, imp))
+
         # newest first, capped per category so the dashboard stays digestible
-        category_items.sort(key=lambda x: x["published_at"] or "", reverse=True)
-        print(f"[NewsDashboard] {category}: found {len(category_items)} items across {len(queries)} queries")
+        category_items.sort(key=lambda x: (x["importance_score"], x["published_at"] or ""), reverse=True)
+        dupes_collapsed = sum(r["source_count"] - 1 for r in category_items)
+        print(f"[NewsDashboard] {category}: {len(category_items)} unique signals "
+              f"({dupes_collapsed} duplicate headlines collapsed) across {len(queries)} queries")
         items.extend(category_items[:NEWS_ITEMS_PER_CATEGORY])
-    print(f"[NewsDashboard] total {len(items)} items fetched across all categories")
+    print(f"[NewsDashboard] total {len(items)} signals fetched across all categories")
     return items
 
 
@@ -686,6 +816,7 @@ def push_to_supabase(items, industry_map):
         "country": it.get("geo_country"),
         "latitude": it.get("latitude"),
         "longitude": it.get("longitude"),
+        "score": score_opportunity(it),
     } for it in items]
 
     if not rows:

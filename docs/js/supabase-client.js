@@ -109,6 +109,30 @@
       const target = redirectTarget || window.location.pathname.split("/").pop();
       window.location.href = "auth.html?redirect=" + encodeURIComponent(target);
     },
+    async getSavedIds(userId) {
+      if (!window.sb || !userId) return new Set();
+      const { data } = await window.sb
+        .from("saved_opportunities")
+        .select("opportunity_id")
+        .eq("profile_id", userId);
+      return new Set((data || []).map((r) => r.opportunity_id));
+    },
+    async saveOpportunity(userId, opportunityId) {
+      if (!window.sb || !userId) return;
+      const { error } = await window.sb
+        .from("saved_opportunities")
+        .insert({ profile_id: userId, opportunity_id: opportunityId });
+      if (error && !String(error.message || "").includes("duplicate")) throw error;
+    },
+    async unsaveOpportunity(userId, opportunityId) {
+      if (!window.sb || !userId) return;
+      const { error } = await window.sb
+        .from("saved_opportunities")
+        .delete()
+        .eq("profile_id", userId)
+        .eq("opportunity_id", opportunityId);
+      if (error) throw error;
+    },
   };
   window.Auth = Auth;
 
@@ -119,7 +143,9 @@
 
     const links = [
       { id: "feed", href: "index.html", label: "Feed" },
-      { id: "post", href: "post.html", label: "Post Opportunity" },
+      { id: "opportunities", href: "opportunities.html", label: "Opportunities" },
+      { id: "signals", href: "signals.html", label: "Signals" },
+      { id: "post", href: "post.html", label: "Post" },
       { id: "messages", href: "messages.html", label: "Messages" },
     ];
 

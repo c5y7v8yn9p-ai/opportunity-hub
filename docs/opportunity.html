@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Opportunity</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=3">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="container narrow" id="detail-mount">
+    <div class="loading">loading opportunity…</div>
+  </div>
+
+  <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=3"></script>
+  <script>
+    renderNav("opportunities");
+
+    const OPPORTUNITY_TYPE_LABELS = {
+      full_time: "Full-time", part_time: "Part-time", contract: "Contract",
+      freelance: "Freelance", gig: "Gig", one_time_task: "One-off task",
+      project: "Project", seasonal: "Seasonal", internship: "Internship",
+      apprenticeship: "Apprenticeship", volunteer: "Volunteer", service_request: "Service request",
+    };
+    const WORK_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
+    const EXPERIENCE_LABELS = { no_experience: "No experience required", beginner: "Entry level", intermediate: "Mid level", advanced: "Senior level", any: "Any level" };
+    const SIGNAL_TYPE_LABELS = {
+      funding: "Funding", hiring: "Hiring", layoff: "Layoffs", expansion: "Expansion",
+      launch: "Launch", acquisition: "Acquisition", regulation: "Regulation",
+      government: "Government", market: "Market", business: "Business", technology: "Tech", other: "Signal",
+    };
+
+    function scoreBadge(score) {
+      const s = score || 0;
+      const cls = s >= 70 ? "high" : s >= 40 ? "mid" : "low";
+      return `<span class="score-badge ${cls}" title="Rule-based: freshness, completeness, credibility — not AI">OPPORTUNITY SCORE ${s}/100</span>`;
+    }
+
+    async function loadDetail() {
+      const mount = document.getElementById("detail-mount");
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      if (!id) { mount.innerHTML = '<div class="empty">No opportunity id given.</div>'; return; }
+      if (!window.sb) { mount.innerHTML = '<div class="empty">Supabase isn\'t configured yet.</div>'; return; }
+
+      const { data: opp, error } = await window.sb
+        .from("opportunities")
+        .select("*, profiles:posted_by ( username, id ), industries:industry_id ( name )")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (error || !opp) {
+        mount.innerHTML = `<div class="empty">Could not load this opportunity${error ? ": " + escapeHtml(error.message) : " — it may have been removed"}.</div>`;
+        return;
+      }
+
+      document.title = "OpportunityHub // " + (opp.title || "Opportunity");
+
+      const metaChips = [];
+      if (opp.industries && opp.industries.name) metaChips.push(opp.industries.name);
+      if (opp.opportunity_type) metaChips.push(OPPORTUNITY_TYPE_LABELS[opp.opportunity_type] || opp.opportunity_type);
+      if (opp.work_mode) metaChips.push(WORK_MODE_LABELS[opp.work_mode] || opp.work_mode);
+      if (opp.city || opp.location) metaChips.push(opp.city || opp.location);
+      if (opp.experience_level) metaChips.push(EXPERIENCE_LABELS[opp.experience_level] || opp.experience_level);
+
+      let payLine = "";
+      if (opp.pay_min) {
+        const cur = opp.pay_currency || "INR";
+        payLine = opp.pay_max && opp.pay_max !== opp.pay_min ? `${cur} ${opp.pay_min}–${opp.pay_max}` : `${cur} ${opp.pay_min}+`;
+      } else if (opp.money_mentioned) {
+        payLine = opp.money_mentioned;
+      }
+
+      const applyHref = opp.source_type === "user" && opp.posted_by ? `profile.html?id=${opp.posted_by}` : opp.url;
+      const applyLabel = opp.source_type === "user" ? "View poster" : "Apply / visit source";
+
+      const user = await Auth.getUser();
+      const savedIds = user ? await Auth.getSavedIds(user.id) : new Set();
+      const isSaved = savedIds.has(opp.id);
+
+      mount.innerHTML = `
+        <div class="detail-box">
+          <div class="detail-title">${escapeHtml(opp.title || "Untitled opportunity")}</div>
+          <div class="detail-sub">${escapeHtml(opp.source || (opp.profiles ? "Posted by " + opp.profiles.username : ""))} · ${opp.created_at ? timeAgo(opp.created_at) : ""}</div>
+          <div class="detail-meta-row">
+            ${scoreBadge(opp.score)}
+            ${metaChips.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
+            ${payLine ? `<span class="tag accent">${escapeHtml(payLine)}</span>` : ""}
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-label">Description</div>
+            <div class="detail-body">${escapeHtml(opp.body || "No description provided.")}</div>
+          </div>
+
+          ${opp.end_date ? `
+          <div class="detail-section">
+            <div class="detail-section-label">Deadline</div>
+            <div class="detail-body">${escapeHtml(new Date(opp.end_date).toLocaleDateString())}</div>
+          </div>` : ""}
+
+          <div class="detail-actions">
+            ${applyHref ? `<a class="btn-primary" href="${applyHref}" target="${opp.source_type === "user" ? "_self" : "_blank"}" rel="noopener">${applyLabel} →</a>` : ""}
+            <button type="button" class="btn-secondary" id="save-detail-btn">${isSaved ? "★ Saved" : "☆ Save"}</button>
+          </div>
+
+          <div class="detail-section" id="related-signal-mount"></div>
+          <div class="detail-section" id="related-opps-mount"></div>
+        </div>
+      `;
+
+      document.getElementById("save-detail-btn").addEventListener("click", async () => {
+        if (!user) { Auth.requireLogin(); return; }
+        const btn = document.getElementById("save-detail-btn");
+        try {
+          if (savedIds.has(opp.id)) {
+            await Auth.unsaveOpportunity(user.id, opp.id);
+            savedIds.delete(opp.id);
+            btn.textContent = "☆ Save";
+          } else {
+            await Auth.saveOpportunity(user.id, opp.id);
+            savedIds.add(opp.id);
+            btn.textContent = "★ Saved";
+          }
+        } catch (err) { alert("Could not update: " + (err.message || err)); }
+      });
+
+      if (opp.signal_id) {
+        const { data: signal } = await window.sb
+          .from("news_items")
+          .select("title, url, category, signal_type, source, published_at")
+          .eq("id", opp.signal_id)
+          .maybeSingle();
+        if (signal) {
+          document.getElementById("related-signal-mount").innerHTML = `
+            <div class="detail-section-label">Related Signal</div>
+            <div class="signal-card">
+              <div class="sc-title"><a href="${escapeHtml(signal.url)}" target="_blank" rel="noopener">${escapeHtml(signal.title)}</a></div>
+              <div class="sc-meta">
+                <span class="tag accent">${escapeHtml(SIGNAL_TYPE_LABELS[signal.signal_type] || "Signal")}</span>
+                <span class="news-item-meta">${escapeHtml(signal.source || "")} · ${signal.published_at ? timeAgo(signal.published_at) : ""}</span>
+              </div>
+            </div>`;
+        }
+      }
+
+      if (opp.industry_id) {
+        const { data: related } = await window.sb
+          .from("opportunities")
+          .select("id, title, work_mode, city, location, score")
+          .eq("industry_id", opp.industry_id)
+          .eq("status", "active")
+          .neq("id", opp.id)
+          .order("score", { ascending: false })
+          .limit(4);
+        if (related && related.length) {
+          document.getElementById("related-opps-mount").innerHTML = `
+            <div class="detail-section-label">Related Opportunities</div>
+            <div class="related-grid">
+              ${related.map((r) => `
+                <div class="mini-card" style="cursor:default;">
+                  <div class="mc-title"><a href="opportunity.html?id=${r.id}" style="text-decoration:none;color:inherit;">${escapeHtml(r.title)}</a></div>
+                  <div class="mc-meta">
+                    ${scoreBadge(r.score)}
+                    ${r.work_mode ? `<span class="tag">${escapeHtml(WORK_MODE_LABELS[r.work_mode] || r.work_mode)}</span>` : ""}
+                    ${r.city || r.location ? `<span class="tag">${escapeHtml(r.city || r.location)}</span>` : ""}
+                  </div>
+                </div>`).join("")}
+            </div>`;
+        }
+      }
+    }
+
+    loadDetail();
+  </script>
+</body>
+</html>

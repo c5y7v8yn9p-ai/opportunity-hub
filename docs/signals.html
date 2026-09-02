@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Signals</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=3">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="updated"><span class="dot"></span><span id="updated">connecting...</span></div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="section-title">Signals</div>
+  <div class="section-sub">Business, startup and employment activity, deduplicated across sources. This is intelligence, not opportunities — use it to spot where opportunities might be forming.</div>
+
+  <div class="container">
+    <div class="filter-group">
+      <div class="filter-group-label">Category</div>
+      <div class="chip-row" id="category-chips">
+        <span class="chip active" data-cat="">All</span>
+        <span class="chip" data-cat="business">Business</span>
+        <span class="chip" data-cat="startup">Startup</span>
+        <span class="chip" data-cat="employment">Employment</span>
+      </div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-group-label">Signal type</div>
+      <div class="chip-row" id="type-chips">
+        <span class="chip active" data-type="">All</span>
+        <span class="chip" data-type="funding">Funding</span>
+        <span class="chip" data-type="hiring">Hiring</span>
+        <span class="chip" data-type="layoff">Layoffs</span>
+        <span class="chip" data-type="expansion">Expansion</span>
+        <span class="chip" data-type="launch">Launch</span>
+        <span class="chip" data-type="acquisition">Acquisition</span>
+        <span class="chip" data-type="regulation">Regulation</span>
+        <span class="chip" data-type="government">Government</span>
+        <span class="chip" data-type="market">Market</span>
+        <span class="chip" data-type="business">Business</span>
+      </div>
+    </div>
+    <div class="results-count" id="results-count"></div>
+    <div id="signals-list" style="margin-top:0.8rem;">
+      <div class="loading">loading signals…</div>
+    </div>
+  </div>
+
+  <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=3"></script>
+  <script>
+    renderNav("signals");
+
+    const SIGNAL_TYPE_LABELS = {
+      funding: "Funding", hiring: "Hiring", layoff: "Layoffs", expansion: "Expansion",
+      launch: "Launch", acquisition: "Acquisition", regulation: "Regulation",
+      government: "Government", market: "Market", business: "Business", technology: "Tech", other: "Signal",
+    };
+
+    let allSignals = [];
+    let activeCategory = "";
+    let activeType = "";
+
+    function applyFilters() {
+      let list = allSignals;
+      if (activeCategory) list = list.filter((s) => s.category === activeCategory);
+      if (activeType) list = list.filter((s) => s.signal_type === activeType);
+      return list;
+    }
+
+    function findOppsLink(signal) {
+      const q = signal.company || signal.title.split(" ").slice(0, 3).join(" ");
+      return "opportunities.html?q=" + encodeURIComponent(q);
+    }
+
+    function render() {
+      const list = applyFilters();
+      const mount = document.getElementById("signals-list");
+      const countEl = document.getElementById("results-count");
+      countEl.textContent = list.length + (list.length === 1 ? " signal" : " signals");
+      if (!list.length) {
+        mount.innerHTML = '<div class="empty">No signals match these filters.</div>';
+        return;
+      }
+      mount.innerHTML = list
+        .map((s) => {
+          const when = s.published_at ? timeAgo(s.published_at) : "";
+          const qBadge = s.source_quality === "verified"
+            ? '<span class="quality-badge verified">verified source</span>'
+            : '<span class="quality-badge">unverified source</span>';
+          const typeLabel = SIGNAL_TYPE_LABELS[s.signal_type] || "Signal";
+          const sourcesNote = s.source_count > 1
+            ? `<span class="sources-count">· reported by ${s.source_count} outlets</span>` : "";
+          return `
+            <div class="signal-card">
+              <div class="sc-title"><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a></div>
+              <div class="sc-meta">
+                <span class="tag accent">${escapeHtml(typeLabel)}</span>
+                <span class="tag">${escapeHtml(s.category)}</span>
+                ${qBadge}
+                <span class="news-item-meta">${escapeHtml(s.source || "")} · ${when}</span>
+                ${sourcesNote}
+              </div>
+              <div class="sc-footer">
+                <a class="sc-find-link" href="${findOppsLink(s)}">🔎 Find related opportunities →</a>
+              </div>
+            </div>`;
+        })
+        .join("");
+    }
+
+    async function loadSignals() {
+      if (!window.sb) return;
+      try {
+        const { data, error } = await window.sb
+          .from("news_items")
+          .select("category, title, url, source, published_at, signal_type, source_quality, importance_score, company, source_count")
+          .order("published_at", { ascending: false })
+          .limit(300);
+        if (error) throw error;
+        allSignals = (data || []).sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
+        document.getElementById("updated").textContent = "last updated: " + new Date().toLocaleString();
+        render();
+      } catch (err) {
+        document.getElementById("signals-list").innerHTML =
+          '<div class="empty">could not load signals (' + escapeHtml(err.message || String(err)) + ').</div>';
+      }
+    }
+
+    document.querySelectorAll("#category-chips .chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        activeCategory = chip.dataset.cat;
+        document.querySelectorAll("#category-chips .chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        render();
+      });
+    });
+    document.querySelectorAll("#type-chips .chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        activeType = chip.dataset.type;
+        document.querySelectorAll("#type-chips .chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        render();
+      });
+    });
+
+    loadSignals();
+  </script>
+</body>
+</html>

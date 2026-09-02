@@ -3,29 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpportunityHub // Daily Feed</title>
+<title>OpportunityHub // Feed</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="css/theme.css?v=3">
 </head>
 <body>
 
   <div class="header">
     <h1><a href="index.html">═ OpportunityHub ═</a></h1>
-    <div class="tagline">Real side-hustle signals // pulled fresh every morning // posted by real people</div>
     <div class="updated"><span class="dot"></span><span id="updated">connecting...</span></div>
     <div id="site-nav"></div>
   </div>
 
-  <div class="container">
-    <div class="paywall-box">
-      <div class="price-line">Free daily feed — or unlock the full firehose for ₹10/month</div>
-      <button class="btn-primary" id="subscribe-btn" onclick="startSubscription()">[ Subscribe — ₹10/month ]</button>
-    </div>
+  <div class="value-prop">
+    <h2>FIND OPPORTUNITIES. NOT JUST NEWS.</h2>
+    <div class="sub">Jobs, freelance work, business leads, funding, and emerging opportunities — discovered from across the web and ranked for action.</div>
   </div>
 
+  <div class="section-title" id="signals-title">Today's Signals</div>
+  <div class="section-sub">Business, startup and employment activity from the last 24 hours — the news behind the opportunities below. <a href="signals.html">→ view all signals</a></div>
   <div class="news-dashboard" id="news-dashboard">
-    <div class="news-dashboard-title">▸ DAILY NEWS — BUSINESS / STARTUP / EMPLOYMENT</div>
     <div class="news-columns">
       <div class="news-column">
         <div class="news-column-title">Business</div>
@@ -42,23 +42,47 @@
     </div>
   </div>
 
+  <div id="why-matters-mount"></div>
+
+  <div class="container">
+    <div class="paywall-box">
+      <div class="price-line">Free daily feed — or unlock the full firehose for ₹10/month</div>
+      <button class="btn-primary" id="subscribe-btn" onclick="startSubscription()">[ Subscribe — ₹10/month ]</button>
+    </div>
+  </div>
+
+  <div class="section-title">Opportunity Discovery</div>
+  <div class="section-sub">Search the live database below, or jump straight to the full tools.</div>
+  <div class="feed-cta">
+    <a class="btn-secondary" href="opportunities.html">→ Full Opportunities Database</a>
+    <a class="btn-secondary" href="signals.html">→ All Signals</a>
+  </div>
+
   <div class="map-shell">
     <div class="map-sidebar">
       <div class="filter-bar">
-        <input class="search-input" id="search-input" type="text" placeholder="Search opportunities, e.g. &quot;video editing&quot;">
-        <div class="chip-row" id="industry-chips"><span style="font-size:0.72rem;color:var(--ink-faint);">loading industries…</span></div>
-        <div class="chip-row" id="workmode-chips">
-          <span class="chip active" data-mode="">All modes</span>
-          <span class="chip" data-mode="remote">Remote</span>
-          <span class="chip" data-mode="hybrid">Hybrid</span>
-          <span class="chip" data-mode="local">Local</span>
+        <input class="search-input" id="search-input" type="text" placeholder="Try: remote video editing jobs">
+        <div class="filter-group">
+          <div class="filter-group-label">Industry</div>
+          <div class="chip-row" id="industry-chips"><span style="font-size:0.72rem;color:var(--ink-faint);">loading industries…</span></div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Work mode</div>
+          <div class="chip-row" id="workmode-chips">
+            <span class="chip active" data-mode="">All modes</span>
+            <span class="chip" data-mode="remote">Remote</span>
+            <span class="chip" data-mode="hybrid">Hybrid</span>
+            <span class="chip" data-mode="local">Local</span>
+          </div>
         </div>
         <select class="search-input" id="sort-select" style="margin-top:0.7rem;">
           <option value="newest">Sort: Newest first</option>
+          <option value="score">Sort: Opportunity score</option>
           <option value="match" id="match-option" style="display:none;">Sort: Best match for me</option>
         </select>
       </div>
       <div class="results-count" id="results-count"></div>
+      <div class="results-count" id="map-filter-note" style="display:none;"></div>
       <div class="map-sidebar-scroll" id="opportunities">
         <div class="loading">loading opportunities…</div>
       </div>
@@ -102,8 +126,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=2"></script>
+  <script src="js/supabase-client.js?v=3"></script>
+  <script src="js/opportunities-feed.js?v=1"></script>
   <script>
     renderNav("feed");
 
@@ -140,13 +166,13 @@
       }
     }
 
-    let map, markerLayer;
-    let allOpps = [];
-    let activeIndustry = null;
-    let activeWorkMode = "";
-    let searchTerm = "";
-    let sortMode = "newest";
-    let myCapabilities = [];
+    const SIGNAL_TYPE_LABELS = {
+      funding: "Funding", hiring: "Hiring", layoff: "Layoffs", expansion: "Expansion",
+      launch: "Launch", acquisition: "Acquisition", regulation: "Regulation",
+      government: "Government", market: "Market", business: "Business", technology: "Tech", other: "Signal",
+    };
+
+    let lastSignals = [];
 
     async function loadNewsDashboard() {
       if (!window.sb) return;
@@ -154,14 +180,18 @@
       try {
         const { data, error } = await window.sb
           .from("news_items")
-          .select("category, title, url, source, published_at")
+          .select("category, title, url, source, published_at, signal_type, source_quality, importance_score, company, source_count")
           .order("published_at", { ascending: false })
-          .limit(90);
+          .limit(120);
         if (error) throw error;
+        lastSignals = data || [];
 
         const byCategory = { business: [], startup: [], employment: [] };
-        (data || []).forEach((item) => {
+        lastSignals.forEach((item) => {
           if (byCategory[item.category]) byCategory[item.category].push(item);
+        });
+        categories.forEach((cat) => {
+          byCategory[cat].sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
         });
 
         categories.forEach((cat) => {
@@ -175,15 +205,18 @@
             .map((it) => {
               const when = it.published_at ? timeAgo(it.published_at) : "";
               const src = it.source ? escapeHtml(it.source) : "";
+              const qBadge = it.source_quality === "verified" ? '<span class="quality-badge verified">verified</span>' : "";
               return (
                 '<a class="news-item" href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' +
                 '<span class="news-item-title">' + escapeHtml(it.title) + '</span>' +
-                '<span class="news-item-meta">' + src + (src && when ? " · " : "") + when + '</span>' +
+                '<span class="news-item-meta">' + src + (src && when ? " · " : "") + when + " " + qBadge + '</span>' +
                 '</a>'
               );
             })
             .join("");
         });
+
+        renderWhyMatters();
       } catch (err) {
         categories.forEach((cat) => {
           document.getElementById("news-" + cat).innerHTML =
@@ -191,353 +224,38 @@
         });
       }
     }
-    loadNewsDashboard();
 
-    function initMap() {
-      map = L.map("leaflet-map", { worldCopyJump: true }).setView([20, 10], 2);
-      // Esri's free World_Dark_Gray_Base — no API key required, unlike
-      // CARTO's basemaps which now gate their free tier behind a key.
-      // Note the {z}/{y}/{x} order (Esri's tile scheme swaps y and x).
-      L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-        {
-          attribution: "Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
-          maxZoom: 16,
-        }
-      ).addTo(map);
-      markerLayer = L.layerGroup().addTo(map);
-    }
-
-    function oppLabel(opp) {
-      return opp.title || (opp.body || "").slice(0, 60) || "Untitled opportunity";
-    }
-
-    function metaTags(opp) {
-      const tags = [];
-      if (opp.industries && opp.industries.name) tags.push(opp.industries.name);
-      else if (opp.opp_type) tags.push(opp.opp_type);
-      if (opp.work_mode) tags.push(opp.work_mode === "remote" ? "Remote" : opp.work_mode === "hybrid" ? "Hybrid" : "Local");
-      if (opp.city || opp.location) tags.push(opp.city || opp.location);
-      if (opp.pay_min) {
-        const cur = opp.pay_currency || "INR";
-        tags.push(opp.pay_max && opp.pay_max !== opp.pay_min ? `${cur} ${opp.pay_min}-${opp.pay_max}` : `${cur} ${opp.pay_min}+`);
-      } else if (opp.money_mentioned) {
-        tags.push(opp.money_mentioned);
-      }
-      // safety cap: some scraped sources stuff many SEO keywords into one
-      // field — never let a single tag pill balloon into a wall of text
-      return tags.map((t) => (t.length > 36 ? t.slice(0, 33) + "…" : t));
-    }
-
-    function freshness(opp) {
-      if (opp.expires_at && new Date(opp.expires_at) < new Date()) {
-        return { label: "Expired", cls: "bad" };
-      }
-      const ref = opp.last_verified_at || opp.created_at;
-      if (!ref) return null;
-      const days = (Date.now() - new Date(ref).getTime()) / 86400000;
-      if (days < 3) return { label: "Fresh", cls: "good" };
-      if (days < 14) return { label: "Active", cls: "" };
-      return { label: "Aging", cls: "warn" };
-    }
-
-    function matchScore(opp) {
-      const skills = Array.isArray(opp.skills) ? opp.skills : [];
-      if (!skills.length || !myCapabilities.length) return { score: 0, matched: [] };
-      const matched = skills.filter((s) =>
-        myCapabilities.some((m) => m.includes(s.toLowerCase()) || s.toLowerCase().includes(m))
-      );
-      return { score: matched.length / skills.length, matched };
-    }
-
-    function renderMiniCard(opp) {
-      const tags = metaTags(opp);
-      const div = document.createElement("div");
-      div.className = "mini-card";
-      div.dataset.id = opp.id;
-      let matchBadge = "";
-      if (myCapabilities.length) {
-        const m = matchScore(opp);
-        if (m.matched.length) {
-          matchBadge = `<div style="font-size:0.7rem;color:#00ff00;font-weight:700;margin-bottom:0.3rem;text-shadow:0 0 6px #00ff00;">🎯 Matches your skills: ${escapeHtml(
-            m.matched.join(", ")
-          )}</div>`;
-        }
-      }
-      const fresh = freshness(opp);
-      const applyHref =
-        opp.source_type === "user" && opp.posted_by
-          ? `profile.html?id=${opp.posted_by}`
-          : opp.url || null;
-      const applyLabel = opp.source_type === "user" ? "view poster →" : "view / apply →";
-      div.innerHTML = `
-        ${matchBadge}
-        <div class="mc-title">${escapeHtml(oppLabel(opp))}</div>
-        <div class="mc-meta">
-          ${fresh ? `<span class="tag ${fresh.cls}">${fresh.label}</span>` : ""}
-          ${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
-        </div>
-        <div style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center;">
-          ${
-            applyHref
-              ? `<a class="card-link" href="${applyHref}" target="${
-                  opp.source_type === "user" ? "_self" : "_blank"
-                }" rel="noopener">${applyLabel}</a>`
-              : `<span></span>`
-          }
-          <button type="button" class="report-link" data-report-id="${opp.id}">report</button>
-        </div>
-      `;
-      div.addEventListener("click", (e) => {
-        if (e.target.closest(".report-link") || e.target.closest(".card-link")) return;
-        focusOpportunity(opp);
-      });
-      div.querySelector(".report-link").addEventListener("click", (e) => {
-        e.stopPropagation();
-        openReportModal(opp.id);
-      });
-      const link = div.querySelector(".card-link");
-      if (link) link.addEventListener("click", (e) => e.stopPropagation());
-      return div;
-    }
-
-    function focusOpportunity(opp) {
-      document.querySelectorAll(".mini-card").forEach((el) => el.classList.toggle("active", el.dataset.id === opp.id));
-      if (opp.latitude != null && opp.longitude != null) {
-        map.flyTo([opp.latitude, opp.longitude], Math.max(map.getZoom(), 6), { duration: 0.6 });
-        const marker = markerLayer.getLayers().find((m) => m._ohId === opp.id);
-        if (marker) marker.openPopup();
-      }
-    }
-
-    function popupHtml(opp) {
-      const link = opp.source_type === "user" && opp.posted_by
-        ? `<a href="profile.html?id=${opp.posted_by}">view poster</a>`
-        : opp.url
-        ? `<a href="${opp.url}" target="_blank" rel="noopener">view source</a>`
-        : "";
-      return `<b>${escapeHtml(oppLabel(opp))}</b>${escapeHtml((opp.body || "").slice(0, 140))}<br>${link}`;
-    }
-
-    function applyFilters() {
-      let list = allOpps;
-      if (activeIndustry) {
-        list = list.filter((o) => o.industry_id === activeIndustry);
-      }
-      if (activeWorkMode) {
-        list = list.filter((o) => o.work_mode === activeWorkMode);
-      }
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase();
-        list = list.filter(
-          (o) =>
-            (o.title || "").toLowerCase().includes(q) ||
-            (o.body || "").toLowerCase().includes(q) ||
-            (o.city || o.location || "").toLowerCase().includes(q) ||
-            (Array.isArray(o.skills) ? o.skills.join(" ") : "").toLowerCase().includes(q)
-        );
-      }
-      if (sortMode === "match" && myCapabilities.length) {
-        list = list.slice().sort((a, b) => matchScore(b).score - matchScore(a).score);
-      }
-      return list;
-    }
-
-    function render() {
-      const grid = document.getElementById("opportunities");
-      const countEl = document.getElementById("results-count");
-      const list = applyFilters();
-
-      countEl.textContent = list.length + (list.length === 1 ? " opportunity" : " opportunities");
-
-      grid.innerHTML = "";
-      if (list.length === 0) {
-        grid.innerHTML = '<div class="empty">No opportunities match. Try clearing filters, or <a href="post.html">post one</a>.</div>';
-      } else {
-        list.forEach((opp) => grid.appendChild(renderMiniCard(opp)));
-      }
-
-      markerLayer.clearLayers();
-      let withCoords = 0;
-      list.forEach((opp) => {
-        if (opp.latitude == null || opp.longitude == null) return;
-        withCoords++;
-        const marker = L.circleMarker([opp.latitude, opp.longitude], {
-          radius: 7, weight: 2, color: "#00ff00", fillColor: "#00ff00", fillOpacity: 0.75,
-        }).bindPopup(popupHtml(opp));
-        marker._ohId = opp.id;
-        marker.addTo(markerLayer);
-      });
-
-      if (withCoords === 0 && list.length > 0) {
-        countEl.textContent += " — none have map coordinates yet, shown as a list only";
-      }
-    }
-
-    async function loadIndustries() {
-      const mount = document.getElementById("industry-chips");
-      if (!window.OH_CONFIGURED) { mount.innerHTML = ""; return; }
+    async function renderWhyMatters() {
+      const mount = document.getElementById("why-matters-mount");
+      const featured = lastSignals
+        .filter((s) => s.company)
+        .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0))[0];
+      if (!featured || !window.sb) { mount.innerHTML = ""; return; }
       try {
-        const { data, error } = await window.sb
-          .from("industries")
-          .select("id, name, slug")
-          .eq("status", "approved")
-          .order("name");
-        if (error) throw error;
-
-        mount.innerHTML = "";
-        const allChip = document.createElement("span");
-        allChip.className = "chip active";
-        allChip.textContent = "All";
-        allChip.addEventListener("click", () => {
-          activeIndustry = null;
-          document.querySelectorAll("#industry-chips .chip").forEach((c) => c.classList.remove("active"));
-          allChip.classList.add("active");
-          render();
-        });
-        mount.appendChild(allChip);
-
-        (data || []).forEach((ind) => {
-          const chip = document.createElement("span");
-          chip.className = "chip";
-          chip.textContent = ind.name;
-          chip.addEventListener("click", () => {
-            activeIndustry = ind.id;
-            document.querySelectorAll("#industry-chips .chip").forEach((c) => c.classList.remove("active"));
-            chip.classList.add("active");
-            render();
-          });
-          mount.appendChild(chip);
-        });
-      } catch (err) {
-        mount.innerHTML = "";
-      }
-    }
-
-    async function loadFeed() {
-      const updatedEl = document.getElementById("updated");
-      const grid = document.getElementById("opportunities");
-
-      if (!window.OH_CONFIGURED) {
-        updatedEl.textContent = "awaiting setup";
-        grid.innerHTML = '<div class="empty">Supabase isn\'t configured yet — see SETUP_GUIDE.md.</div>';
-        return;
-      }
-
-      try {
+        const q = featured.company;
         const { data, error } = await window.sb
           .from("opportunities")
-          .select("*, profiles:posted_by ( username ), industries:industry_id ( name )")
+          .select("id", { count: "exact", head: false })
           .eq("status", "active")
-          .order("created_at", { ascending: false })
-          .limit(200);
-
+          .ilike("title", `%${q}%`);
         if (error) throw error;
-
-        updatedEl.textContent = "last updated: " + new Date().toLocaleString();
-        allOpps = data || [];
-
-        if (allOpps.length === 0) {
-          grid.innerHTML =
-            '<div class="empty">no opportunities yet. run the scraper (see SETUP_GUIDE.md) or ' +
-            '<a href="post.html">post the first one</a>.</div>';
-          return;
-        }
-
-        render();
+        const count = (data || []).length;
+        if (count === 0) { mount.innerHTML = ""; return; }
+        mount.innerHTML = `
+          <div class="why-matters-box">
+            <div class="wm-label">Why This Matters</div>
+            <div class="wm-signal">${escapeHtml(featured.title)}</div>
+            <div class="wm-explain">${escapeHtml(featured.company)} is in today's ${escapeHtml(SIGNAL_TYPE_LABELS[featured.signal_type] || "business")} signals — here's what's live in the opportunity database that mentions them.</div>
+            <div class="wm-stats"><div class="wm-stat"><b>${count}</b>related listing${count === 1 ? "" : "s"}</div></div>
+            <a class="btn-secondary" href="opportunities.html?q=${encodeURIComponent(q)}">View Opportunities →</a>
+          </div>`;
       } catch (err) {
-        updatedEl.textContent = "connection error";
-        grid.innerHTML = `<div class="empty">could not load opportunities (${escapeHtml(
-          err.message || String(err)
-        )}).</div>`;
+        mount.innerHTML = "";
       }
     }
 
-    async function loadMyCapabilities() {
-      if (!window.OH_CONFIGURED) return;
-      const user = await Auth.getUser();
-      if (!user) return;
-      try {
-        const { data } = await window.sb.from("capabilities").select("skill").eq("profile_id", user.id);
-        myCapabilities = (data || []).map((c) => c.skill.toLowerCase());
-        if (myCapabilities.length) {
-          document.getElementById("match-option").style.display = "";
-        }
-      } catch {
-        // no capabilities yet — matching just stays off
-      }
-    }
-
-    document.getElementById("search-input").addEventListener("input", (e) => {
-      searchTerm = e.target.value.trim();
-      render();
-    });
-
-    document.querySelectorAll("#workmode-chips .chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        activeWorkMode = chip.dataset.mode;
-        document.querySelectorAll("#workmode-chips .chip").forEach((c) => c.classList.remove("active"));
-        chip.classList.add("active");
-        render();
-      });
-    });
-
-    document.getElementById("sort-select").addEventListener("change", (e) => {
-      sortMode = e.target.value;
-      render();
-    });
-
-    let reportingOppId = null;
-
-    function openReportModal(oppId) {
-      reportingOppId = oppId;
-      document.getElementById("report-msg").textContent = "";
-      document.getElementById("report-msg").className = "form-msg";
-      document.getElementById("report-modal").style.display = "flex";
-    }
-    function closeReportModal() {
-      document.getElementById("report-modal").style.display = "none";
-    }
-
-    document.getElementById("report-cancel-btn").addEventListener("click", closeReportModal);
-    document.getElementById("report-modal").addEventListener("click", (e) => {
-      if (e.target.id === "report-modal") closeReportModal();
-    });
-
-    document.getElementById("report-submit-btn").addEventListener("click", async () => {
-      const msg = document.getElementById("report-msg");
-      if (!window.OH_CONFIGURED) return;
-      const user = await Auth.getUser();
-      if (!user) {
-        msg.className = "form-msg err";
-        msg.textContent = "Log in to report a listing.";
-        return;
-      }
-      try {
-        const { error } = await window.sb.from("reports").insert({
-          opportunity_id: reportingOppId,
-          reporter_id: user.id,
-          reason: document.getElementById("report-reason").value,
-          details: document.getElementById("report-details").value.trim(),
-        });
-        if (error) throw error;
-        msg.className = "form-msg ok";
-        msg.textContent = "Reported — thank you, we'll take a look.";
-        setTimeout(closeReportModal, 1300);
-      } catch (err) {
-        msg.className = "form-msg err";
-        msg.textContent = (err.message || "").includes("duplicate")
-          ? "You've already reported this listing."
-          : err.message || "Could not submit report.";
-      }
-    });
-
-    initMap();
-    loadIndustries();
-    (async function boot() {
-      await loadMyCapabilities();
-      await loadFeed();
-    })();
+    loadNewsDashboard();
+    initOpportunitiesFeed();
   </script>
 </body>
 </html>
