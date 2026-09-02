@@ -49,7 +49,8 @@
       return (div.textContent || div.innerText || "").replace(/\s+\n/g, "\n").trim();
     }
 
-    function scoreBadge(score) {
+    function scoreBadge(score, status) {
+      if (status === "speculative") return "";
       const s = score || 0;
       const cls = s >= 70 ? "high" : s >= 40 ? "mid" : "low";
       return `<span class="score-badge ${cls}" title="Rule-based: freshness, completeness, credibility — not AI">OPPORTUNITY SCORE ${s}/100</span>`;
@@ -91,18 +92,25 @@
       }
 
       const applyHref = opp.source_type === "user" && opp.posted_by ? `profile.html?id=${opp.posted_by}` : opp.url;
-      const applyLabel = opp.source_type === "user" ? "View poster" : "Apply / visit source";
+      const applyLabel = opp.source_type === "user" ? "View poster" : opp.status === "speculative" ? "Read the signal source" : "Apply / visit source";
 
       const user = await Auth.getUser();
       const savedIds = user ? await Auth.getSavedIds(user.id) : new Set();
       const isSaved = savedIds.has(opp.id);
 
+      const specBanner = opp.status === "speculative" ? `
+        <div class="speculative-banner">
+          <b>💡 Speculative lead</b> — this was generated from a news signal, not a confirmed job or gig posting.
+          Nobody has posted this opportunity; verify directly with the company before acting on it.
+        </div>` : "";
+
       mount.innerHTML = `
         <div class="detail-box">
+          ${specBanner}
           <div class="detail-title">${escapeHtml(opp.title || "Untitled opportunity")}</div>
           <div class="detail-sub">${escapeHtml(opp.source || (opp.profiles ? "Posted by " + opp.profiles.username : ""))} · ${opp.created_at ? timeAgo(opp.created_at) : ""}</div>
           <div class="detail-meta-row">
-            ${scoreBadge(opp.score)}
+            ${scoreBadge(opp.score, opp.status)}
             ${metaChips.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
             ${payLine ? `<span class="tag accent">${escapeHtml(payLine)}</span>` : ""}
           </div>
@@ -180,7 +188,7 @@
                 <div class="mini-card" style="cursor:default;">
                   <div class="mc-title"><a href="opportunity.html?id=${r.id}" style="text-decoration:none;color:inherit;">${escapeHtml(r.title)}</a></div>
                   <div class="mc-meta">
-                    ${scoreBadge(r.score)}
+                    ${scoreBadge(r.score, r.status)}
                     ${r.work_mode ? `<span class="tag">${escapeHtml(WORK_MODE_LABELS[r.work_mode] || r.work_mode)}</span>` : ""}
                     ${r.city || r.location ? `<span class="tag">${escapeHtml(r.city || r.location)}</span>` : ""}
                   </div>

@@ -69,10 +69,15 @@
           </div>
         </div>
         <select class="search-input" id="sort-select" style="margin-top:0.7rem;">
+          <option value="recommended">Sort: Recommended</option>
           <option value="newest">Sort: Newest first</option>
           <option value="score">Sort: Opportunity score</option>
           <option value="match" id="match-option" style="display:none;">Sort: Best match for me</option>
         </select>
+        <label class="speculative-toggle-label">
+          <input type="checkbox" id="speculative-toggle">
+          Show speculative leads <span class="tag speculative-badge" style="margin-left:0.3rem;">💡 from signals, unconfirmed</span>
+        </label>
       </div>
       <div class="results-count" id="results-count"></div>
       <div class="results-count" id="map-filter-note" style="display:none;"></div>

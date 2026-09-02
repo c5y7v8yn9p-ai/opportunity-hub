@@ -67,6 +67,7 @@
     let allSignals = [];
     let activeCategory = "";
     let activeType = "";
+    let signalToOpportunity = {}; // signal_id -> opportunity id (speculative leads)
 
     function applyFilters() {
       let list = allSignals;
@@ -109,7 +110,9 @@
                 ${sourcesNote}
               </div>
               <div class="sc-footer">
-                <a class="sc-find-link" href="${findOppsLink(s)}">🔎 Find related opportunities →</a>
+                ${signalToOpportunity[s.id]
+                  ? `<a class="sc-find-link speculative-badge" style="border:none;text-decoration:underline;" href="opportunity.html?id=${signalToOpportunity[s.id]}">💡 Possible opportunity generated →</a>`
+                  : `<a class="sc-find-link" href="${findOppsLink(s)}">🔎 Find related opportunities →</a>`}
               </div>
             </div>`;
         })
@@ -121,11 +124,21 @@
       try {
         const { data, error } = await window.sb
           .from("news_items")
-          .select("category, title, url, source, published_at, signal_type, source_quality, importance_score, company, source_count")
+          .select("id, category, title, url, source, published_at, signal_type, source_quality, importance_score, company, source_count")
           .order("published_at", { ascending: false })
           .limit(300);
         if (error) throw error;
         allSignals = (data || []).sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0));
+
+        const signalIds = allSignals.map((s) => s.id);
+        if (signalIds.length) {
+          const { data: linked } = await window.sb
+            .from("opportunities")
+            .select("id, signal_id")
+            .in("signal_id", signalIds);
+          (linked || []).forEach((o) => { signalToOpportunity[o.signal_id] = o.id; });
+        }
+
         document.getElementById("updated").textContent = "last updated: " + new Date().toLocaleString();
         render();
       } catch (err) {

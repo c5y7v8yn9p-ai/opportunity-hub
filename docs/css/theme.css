@@ -387,6 +387,23 @@ a { color: #00ff00; }
   font-family: 'Courier Prime', monospace !important;
 }
 
+/* ---------- speculative leads (signal -> opportunity extraction) ---------- */
+.speculative-badge {
+  border-color: #ffcc00 !important; color: #ffcc00 !important; background: rgba(255,204,0,0.08) !important;
+}
+.speculative-toggle-label {
+  display: flex; align-items: center; gap: 0.4rem; margin-top: 0.7rem; font-size: 0.72rem;
+  opacity: 0.85; cursor: pointer;
+}
+.speculative-toggle-label input { accent-color: #ffcc00; cursor: pointer; }
+.mini-card.speculative { border-style: dashed; border-color: rgba(255,204,0,0.6); }
+.mini-card.speculative:hover, .mini-card.speculative.active { box-shadow: 0 0 12px rgba(255,204,0,0.4); }
+.speculative-banner {
+  border: 1px dashed #ffcc00; background: rgba(255,204,0,0.06); color: #ffcc00;
+  padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 0.78rem; line-height: 1.5;
+}
+.speculative-banner b { text-transform: uppercase; letter-spacing: 0.5px; }
+
 footer { text-align: center; font-size: 0.68rem; opacity: 0.5; padding: 2rem 1rem 1rem; position: relative; z-index: 10; letter-spacing: 0.5px; }
 
 @media (max-width: 600px) {

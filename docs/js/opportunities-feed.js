@@ -55,12 +55,13 @@ function parseSearchQuery(raw) {
   let activeWorkMode = "";
   let activeExperience = "";
   let searchTerm = "";
-  let sortMode = "newest";
+  let sortMode = "recommended";
   let myCapabilities = [];
   let mySavedIds = new Set();
   let currentUser = null;
   let mapFilterIds = null; // Set of ids, or null = no map-cluster filter active
   let mapFilterLabel = "";
+  let showSpeculative = false;
 
   function oppLabel(opp) { return opp.title || (opp.body || "").slice(0, 60) || "Untitled opportunity"; }
 
@@ -91,6 +92,9 @@ function parseSearchQuery(raw) {
   }
 
   function scoreBadge(opp) {
+    if (opp.status === "speculative") {
+      return `<span class="tag speculative-badge" title="Generated from a news signal — not a confirmed posting. Verify with the company.">💡 SPECULATIVE LEAD</span>`;
+    }
     const s = opp.score || 0;
     const cls = s >= 70 ? "high" : s >= 40 ? "mid" : "low";
     return `<span class="score-badge ${cls}" title="Rule-based: freshness, completeness, credibility — not AI">SCORE ${s}</span>`;
@@ -106,7 +110,7 @@ function parseSearchQuery(raw) {
   function renderMiniCard(opp) {
     const tags = metaTags(opp);
     const div = document.createElement("div");
-    div.className = "mini-card";
+    div.className = "mini-card" + (opp.status === "speculative" ? " speculative" : "");
     div.dataset.id = opp.id;
     let matchBadge = "";
     if (myCapabilities.length) {
@@ -117,7 +121,7 @@ function parseSearchQuery(raw) {
     }
     const fresh = freshness(opp);
     const applyHref = opp.source_type === "user" && opp.posted_by ? `profile.html?id=${opp.posted_by}` : opp.url || null;
-    const applyLabel = opp.source_type === "user" ? "view poster →" : "view / apply →";
+    const applyLabel = opp.source_type === "user" ? "view poster →" : opp.status === "speculative" ? "read the signal →" : "view / apply →";
     const isSaved = mySavedIds.has(opp.id);
     div.innerHTML = `
       ${matchBadge}
@@ -207,6 +211,22 @@ function parseSearchQuery(raw) {
       list = list.slice().sort((a, b) => matchScore(b).score - matchScore(a).score);
     } else if (sortMode === "score") {
       list = list.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+    } else if (sortMode === "recommended") {
+      // Blended ranking, not pure recency: opportunity score plus a
+      // freshness component that decays over ~3 weeks, so a strong older
+      // listing can still beat a weak brand-new one. Spec section 23:
+      // "don't simply sort everything chronologically."
+      const freshnessOf = (o) => {
+        const ref = o.last_verified_at || o.created_at;
+        if (!ref) return 0;
+        const days = (Date.now() - new Date(ref).getTime()) / 86400000;
+        return Math.max(0, 100 - days * 5);
+      };
+      list = list.slice().sort((a, b) => {
+        const rankA = (a.score || 0) * 0.6 + freshnessOf(a) * 0.4;
+        const rankB = (b.score || 0) * 0.6 + freshnessOf(b) * 0.4;
+        return rankB - rankA;
+      });
     }
     return list;
   }
@@ -343,12 +363,13 @@ function parseSearchQuery(raw) {
       return;
     }
     try {
-      const { data, error } = await window.sb
+      let query = window.sb
         .from("opportunities")
         .select("*, profiles:posted_by ( username ), industries:industry_id ( name )")
-        .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(300);
+      query = showSpeculative ? query.in("status", ["active", "speculative"]) : query.eq("status", "active");
+      const { data, error } = await query;
       if (error) throw error;
       if (updatedEl) updatedEl.textContent = "last updated: " + new Date().toLocaleString();
       allOpps = data || [];
@@ -427,6 +448,14 @@ function parseSearchQuery(raw) {
     wireChipRow("workmode-chips", "mode", (v) => { activeWorkMode = v; render(); });
     wireChipRow("type-chips", "type", (v) => { activeType = v; render(); });
     wireChipRow("experience-chips", "exp", (v) => { activeExperience = v; render(); });
+
+    const specToggle = document.getElementById("speculative-toggle");
+    if (specToggle) {
+      // Deep link support: opportunities.html?speculative=1 (from Signals)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("speculative") === "1") { specToggle.checked = true; showSpeculative = true; }
+      specToggle.addEventListener("change", (e) => { showSpeculative = e.target.checked; loadFeed(); });
+    }
 
     const sortSelect = document.getElementById("sort-select");
     if (sortSelect) sortSelect.addEventListener("change", (e) => { sortMode = e.target.value; render(); });

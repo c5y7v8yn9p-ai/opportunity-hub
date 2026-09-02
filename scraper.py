@@ -426,6 +426,123 @@ def prune_old_news(days=14):
         print(f"[Supabase] news prune skipped: {e}", file=sys.stderr)
 
 
+# ============================================================
+# Phase 2 — signal -> opportunity extraction ("speculative leads")
+#
+# A speculative opportunity is NOT a real job/gig posting — it's a clearly
+# labeled guess ("Company X may be hiring, based on a funding signal") built
+# from a high-value news signal that has no matching real posting yet.
+# status='speculative' keeps it out of every existing view automatically,
+# since every page already filters on status='active'. Only a page that
+# explicitly opts in (the "show speculative leads" toggle on Opportunities,
+# or a direct link from Signals) will ever show one.
+# ============================================================
+
+SPECULATIVE_SIGNAL_TYPES = {"funding", "expansion", "hiring", "launch", "acquisition"}
+SPECULATIVE_MIN_IMPORTANCE = 60
+
+SPECULATIVE_HEADLINE = {
+    "funding": "may be scaling up and hiring soon",
+    "expansion": "is expanding — may have new local opportunities",
+    "hiring": "is actively hiring",
+    "launch": "just launched something new — may need support or vendors",
+    "acquisition": "was involved in an acquisition — may be restructuring roles",
+}
+
+
+def generate_speculative_opportunities(signals):
+    """Turn today's highest-value signals into candidate leads. Never
+    fabricates a real posting — every row is explicit about being a guess,
+    and links straight back to the signal it came from."""
+    candidates = []
+    for s in signals:
+        if s.get("importance_score", 0) < SPECULATIVE_MIN_IMPORTANCE:
+            continue
+        if s.get("signal_type") not in SPECULATIVE_SIGNAL_TYPES:
+            continue
+        company = s.get("company")
+        if not company:
+            continue
+        verb = SPECULATIVE_HEADLINE[s["signal_type"]]
+        candidates.append({
+            "title": f"Possible opportunity: {company} {verb}",
+            "body": (
+                "SPECULATIVE LEAD — generated from a news signal, not a confirmed "
+                "job posting. Verify directly with the company before applying.\n\n"
+                f"Signal: \"{s['title']}\" ({s.get('source') or 'unknown source'})"
+            ),
+            "url": s["url"],  # same URL as the signal's article — see dedup note below
+            "source": f"Signal: {s.get('source') or 'Google News'}",
+            "signal_url": s["url"],
+        })
+    return candidates
+
+
+def fetch_signal_ids_by_url(urls):
+    """After push_news_to_supabase(), look up the ids Supabase assigned so
+    speculative opportunities can carry a real signal_id foreign key."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY) or not urls:
+        return {}
+    try:
+        url_list = ",".join(f'"{u}"' for u in urls)
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/news_items",
+            params={"select": "id,url", "url": f"in.({url_list})"},
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        return {row["url"]: row["id"] for row in r.json()}
+    except Exception as e:
+        print(f"[Supabase] could not look up signal ids, speculative leads will have no signal_id link: {e}", file=sys.stderr)
+        return {}
+
+
+def push_speculative_opportunities(candidates, existing_urls, signal_url_to_id):
+    """Insert speculative leads through the same url-based dedup as real
+    scraped opportunities (existing_urls), so the same signal never spawns
+    a duplicate lead on a later run."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return 0
+    rows = []
+    for c in candidates:
+        if c["url"] in existing_urls:
+            continue
+        rows.append({
+            "source_type": "scraped",
+            "source": c["source"],
+            "title": c["title"],
+            "body": c["body"],
+            "opp_type": "General",
+            "url": c["url"],
+            "engagement": 0,
+            "posted_by": None,
+            "status": "speculative",
+            "signal_id": signal_url_to_id.get(c["signal_url"]),
+        })
+        existing_urls.add(c["url"])  # guard against dupes within this same run too
+    if not rows:
+        return 0
+    r = requests.post(
+        f"{SUPABASE_URL}/rest/v1/opportunities",
+        json=rows,
+        headers={
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        },
+        timeout=30,
+    )
+    if not r.ok:
+        print(f"[Supabase] speculative opportunity insert failed ({r.status_code}): {r.text[:500]}", file=sys.stderr)
+        return 0
+    return len(rows)
+
+
 
 def fetch_youtube():
     if not YOUTUBE_API_KEY:
@@ -980,6 +1097,17 @@ def main():
     news_inserted = push_news_to_supabase(news_items)
     print(f"Inserted {news_inserted} news items (duplicates by url skipped)")
     prune_old_news(days=14)
+
+    # Phase 2 — signal -> opportunity extraction. Runs after the news push
+    # so we can look up the real signal_id each candidate should link to.
+    speculative_candidates = generate_speculative_opportunities(news_items)
+    if speculative_candidates:
+        signal_url_to_id = fetch_signal_ids_by_url([c["signal_url"] for c in speculative_candidates])
+        # existing_urls already holds every scraped url (real + speculative)
+        # from earlier in this run, so this reuses the same dedup guard.
+        spec_inserted = push_speculative_opportunities(speculative_candidates, existing_urls, signal_url_to_id)
+        print(f"Inserted {spec_inserted} speculative leads from signals "
+              f"({len(speculative_candidates) - spec_inserted} already existed, skipped)")
 
 
 if __name__ == "__main__":
