@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Leads</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/theme.css?v=7">
 </head>
 <body>
 
@@ -26,7 +26,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=6"></script>
+  <script src="js/supabase-client.js?v=7"></script>
   <script>
     renderNav("leads");
 
@@ -84,6 +84,7 @@
             <div class="intent-bar"><div class="intent-bar-fill" style="width:${Math.min(100, s.intent)}%"></div></div>
           </div>
           <div class="card-title"><a href="opportunity.html?id=${s.opp.id}">${escapeHtml(oppLabel(s.opp))}</a></div>
+          ${s.opp.company ? `<div style="margin:0.15rem 0;">${window.OH_companyLinkHtml(s.opp.company)}</div>` : ""}
           <div class="card-text">${escapeHtml([s.opp.industries && s.opp.industries.name, s.opp.city || s.opp.location].filter(Boolean).join(" · "))}</div>
           ${s.signal ? `<div class="tech-label">EVIDENCE</div>${window.OH_evidenceChainHtml(s.signal)}` : ""}
           <div class="card-footer" style="margin-top:0.7rem;">

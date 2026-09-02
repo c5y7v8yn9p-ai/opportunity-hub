@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Opportunity</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/theme.css?v=7">
 </head>
 <body>
 
@@ -22,7 +22,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=6"></script>
+  <script src="js/supabase-client.js?v=7"></script>
   <script>
     renderNav("opportunities");
 
@@ -91,6 +91,7 @@
       const isSaved = savedIds.has(opp.id);
       const profile = user ? await Auth.getProfile(user.id) : null;
       const dna = profile && profile.onboarding_completed ? profile.dna : null;
+      const boostProfile = user ? await window.OH_getEventBoostProfile(user.id) : null;
 
       window.OH_logEvent(user && user.id, opp.id, "view");
 
@@ -114,7 +115,7 @@
 
       const scoreRow = `
         <div class="score-row">
-          ${dna ? (() => { const m = window.OH_computeDnaScore(opp, dna); return m > 0 ? `<div class="score-pill match"><span class="sp-label">Match</span><span class="sp-value">${m}%</span></div>` : ""; })() : ""}
+          ${(() => { const base = dna ? window.OH_computeDnaScore(opp, dna) : 0; const m = window.OH_applyEventBoost(base, opp, boostProfile); return m > 0 ? `<div class="score-pill match"><span class="sp-label">Match</span><span class="sp-value">${m}%</span></div>` : ""; })()}
           ${(() => { const q = window.OH_qualityBucket(opp); return opp.status === "speculative" ? "" : `<div class="score-pill ${q.cls}"><span class="sp-label">Quality</span><span class="sp-value">${q.label}</span></div>`; })()}
           <div class="score-pill"><span class="sp-label">Confidence</span><span class="sp-value">${window.OH_computeConfidence(opp)}%</span></div>
         </div>
@@ -128,6 +129,7 @@
           ${specBanner}
           <div class="detail-title">${escapeHtml(opp.title || "Untitled opportunity")}</div>
           <div class="detail-sub">${escapeHtml(opp.source || (opp.profiles ? "Posted by " + opp.profiles.username : ""))} · ${opp.created_at ? timeAgo(opp.created_at) : ""}</div>
+          ${opp.company ? `<div style="margin-bottom:0.6rem;">${window.OH_companyLinkHtml(opp.company)}</div>` : ""}
           ${scoreRow}
           ${whyList ? `<div class="detail-section-label">Why This Matches</div>${whyList}` : ""}
           <div class="detail-meta-row">
@@ -155,6 +157,7 @@
 
           <div class="detail-section" id="related-signal-mount"></div>
           <div class="detail-section" id="related-opps-mount"></div>
+          ${(opp.company || opp.signal_id) ? `<div class="everything-else-link"><a href="graph.html${opp.company ? "?focus=" + encodeURIComponent(opp.company) : ""}">View in Opportunity Graph →</a></div>` : ""}
         </div>
       `;
 

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Opportunity Graph</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=7">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="section-title">Opportunity Graph</div>
+  <div class="section-sub">How today's signals actually connect to companies and opportunities — only real, matched connections are drawn. Most of the map is still empty; that's honest, not a bug.</div>
+
+  <div class="container">
+    <div class="graph-legend">
+      <span><i class="graph-dot signal"></i> Signal</span>
+      <span><i class="graph-dot company"></i> Company</span>
+      <span><i class="graph-dot opp"></i> Opportunity</span>
+      <span><i class="graph-dot lead"></i> Speculative lead</span>
+    </div>
+    <div class="graph-shell">
+      <div class="graph-canvas-wrap" id="graph-canvas-wrap">
+        <div class="loading">loading graph…</div>
+      </div>
+      <div class="graph-panel" id="graph-panel">
+        <div class="tech-label">SELECT A NODE</div>
+        <div class="graph-panel-body">Click any dot to see what it is and how it's connected.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=7"></script>
+  <script>
+    renderNav("");
+
+    async function loadGraph() {
+      const wrap = document.getElementById("graph-canvas-wrap");
+      if (!window.OH_CONFIGURED) { wrap.innerHTML = '<div class="empty">Supabase isn\'t configured yet.</div>'; return; }
+
+      const [{ data: signals }, { data: opps }] = await Promise.all([
+        window.sb.from("news_items")
+          .select("id, title, company, signal_type, published_at")
+          .order("published_at", { ascending: false })
+          .limit(150),
+        window.sb.from("opportunities")
+          .select("id, title, company, signal_id, status")
+          .in("status", ["active", "speculative"])
+          .order("created_at", { ascending: false })
+          .limit(300),
+      ]);
+
+      const signalList = signals || [];
+      const oppList = opps || [];
+
+      const nodes = new Map(); // id -> node
+      const edges = [];
+      const companyByKey = new Map(); // slug -> node id
+
+      function ensureCompany(name) {
+        const key = window.OH_companySlug(name);
+        if (!key) return null;
+        if (companyByKey.has(key)) return companyByKey.get(key);
+        const id = "company:" + key;
+        nodes.set(id, { id, type: "company", label: name.trim(), raw: name.trim() });
+        companyByKey.set(key, id);
+        return id;
+      }
+
+      const signalById = new Map();
+      signalList.forEach((s) => signalById.set(s.id, s));
+
+      // Pass 1: signal -> company edges (only signals that mention a company)
+      signalList.forEach((s) => {
+        if (!s.company) return;
+        const sid = "signal:" + s.id;
+        const cid = ensureCompany(s.company);
+        if (!cid) return;
+        nodes.set(sid, { id: sid, type: "signal", label: s.title, raw: s });
+        edges.push({ source: sid, target: cid, kind: "mentions" });
+      });
+
+      // Pass 2: opportunity -> signal (generated-from, the strongest real
+      // edge) and opportunity -> company (company-name match).
+      oppList.forEach((o) => {
+        const oid = "opp:" + o.id;
+        let linked = false;
+        if (o.signal_id && signalById.has(o.signal_id)) {
+          const sid = "signal:" + o.signal_id;
+          if (!nodes.has(sid)) nodes.set(sid, { id: sid, type: "signal", label: signalById.get(o.signal_id).title, raw: signalById.get(o.signal_id) });
+          nodes.set(oid, { id: oid, type: o.status === "speculative" ? "lead" : "opp", label: o.title, raw: o });
+          edges.push({ source: sid, target: oid, kind: "generated" });
+          linked = true;
+        }
+        if (o.company) {
+          const cid = ensureCompany(o.company);
+          if (cid) {
+            nodes.set(oid, { id: oid, type: o.status === "speculative" ? "lead" : "opp", label: o.title, raw: o });
+            edges.push({ source: cid, target: oid, kind: "mentions" });
+            linked = true;
+          }
+        }
+      });
+
+      const nodeArr = Array.from(nodes.values());
+      if (nodeArr.length < 2 || !edges.length) {
+        wrap.innerHTML = '<div class="empty">Not enough linked data yet to draw a graph — most signals and postings don\'t share a company name or a direct link right now. This will fill in as more signals connect to real opportunities.</div>';
+        return;
+      }
+
+      wrap.innerHTML = "";
+      const width = wrap.clientWidth || 800;
+      const height = 520;
+
+      const svg = d3.select(wrap).append("svg").attr("width", width).attr("height", height).attr("viewBox", [0, 0, width, height]);
+      const g = svg.append("g");
+      svg.call(d3.zoom().scaleExtent([0.4, 3]).on("zoom", (ev) => g.attr("transform", ev.transform)));
+
+      const colorFor = (t) => t === "signal" ? "var(--accent-strong)" : t === "company" ? "var(--good)" : t === "lead" ? "var(--warn)" : "var(--text-muted)";
+      const radiusFor = (t) => t === "company" ? 9 : t === "signal" ? 7 : 6;
+
+      const sim = d3.forceSimulation(nodeArr)
+        .force("link", d3.forceLink(edges).id((d) => d.id).distance((e) => e.kind === "generated" ? 60 : 90).strength(0.5))
+        .force("charge", d3.forceManyBody().strength(-140))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide().radius(24));
+
+      const link = g.append("g").selectAll("line").data(edges).join("line")
+        .style("stroke", "var(--border-strong)")
+        .attr("stroke-width", (d) => d.kind === "generated" ? 2 : 1)
+        .attr("stroke-dasharray", (d) => d.kind === "mentions" ? "3,3" : null);
+
+      const node = g.append("g").selectAll("circle").data(nodeArr).join("circle")
+        .attr("r", (d) => radiusFor(d.type))
+        .style("fill", (d) => colorFor(d.type))
+        .style("stroke", "var(--bg)")
+        .attr("stroke-width", 1.5)
+        .style("cursor", "pointer")
+        .call(d3.drag()
+          .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+          .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+          .on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+      node.on("click", (ev, d) => showPanel(d));
+
+      const label = g.append("g").selectAll("text").data(nodeArr).join("text")
+        .text((d) => d.label && d.label.length > 26 ? d.label.slice(0, 26) + "…" : (d.label || ""))
+        .attr("font-size", 9)
+        .style("fill", "var(--text-faint)")
+        .attr("dx", 10)
+        .attr("dy", 3)
+        .style("pointer-events", "none");
+
+      sim.on("tick", () => {
+        link.attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y)
+            .attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y);
+        node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+        label.attr("x", (d) => d.x).attr("y", (d) => d.y);
+      });
+
+      function showPanel(d) {
+        const panel = document.getElementById("graph-panel");
+        let body = "";
+        if (d.type === "signal") {
+          body = `<div class="detail-section-label" style="margin-top:0;">Signal</div><div class="detail-body">${escapeHtml(d.label)}</div><a class="card-link" href="signals.html">View signals →</a>`;
+        } else if (d.type === "company") {
+          body = `<div class="detail-section-label" style="margin-top:0;">Company</div><div class="detail-body">${escapeHtml(d.label)}</div><a class="card-link" href="company.html?name=${encodeURIComponent(d.raw)}">View company →</a>`;
+        } else {
+          const statusLabel = d.type === "lead" ? "Speculative lead" : "Opportunity";
+          body = `<div class="detail-section-label" style="margin-top:0;">${statusLabel}</div><div class="detail-body">${escapeHtml(d.label)}</div><a class="card-link" href="opportunity.html?id=${d.raw.id}">View →</a>`;
+        }
+        panel.innerHTML = `<div class="tech-label">SELECTED</div><div class="graph-panel-body">${body}</div>`;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const focus = params.get("focus");
+      if (focus) {
+        const fid = companyByKey.get(window.OH_companySlug(focus));
+        if (fid) setTimeout(() => { const d = nodes.get(fid); if (d) showPanel(d); }, 300);
+      }
+    }
+
+    loadGraph();
+  </script>
+</body>
+</html>

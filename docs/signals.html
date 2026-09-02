@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Signals</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/theme.css?v=7">
 </head>
 <body>
 
@@ -54,7 +54,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=6"></script>
+  <script src="js/supabase-client.js?v=7"></script>
   <script>
     renderNav("signals");
 
@@ -102,6 +102,7 @@
           return `
             <div class="signal-card">
               <div class="sc-title"><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a></div>
+              ${s.company ? `<div style="margin:0.2rem 0;">${window.OH_companyLinkHtml(s.company)}</div>` : ""}
               <div class="sc-meta">
                 <span class="tag accent">${escapeHtml(typeLabel)}</span>
                 <span class="tag">${escapeHtml(s.category)}</span>

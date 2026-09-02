@@ -74,6 +74,7 @@ function parseSearchQuery(raw) {
   let currentUser = null;
   let myPreferences = null;
   let myDna = null;
+  let myBoostProfile = null;
   let mapFilterIds = null; // Set of ids, or null = no map-cluster filter active
   let mapFilterLabel = "";
   let showSpeculative = false;
@@ -138,7 +139,7 @@ function parseSearchQuery(raw) {
     const applyHref = opp.source_type === "user" && opp.posted_by ? `profile.html?id=${opp.posted_by}` : opp.url || null;
     const applyLabel = opp.source_type === "user" ? "view poster →" : opp.status === "speculative" ? "read the signal →" : "view / apply →";
     const isSaved = mySavedIds.has(opp.id);
-    const dnaMatch = myDna ? window.OH_computeDnaScore(opp, myDna) : 0;
+    const dnaMatch = window.OH_applyEventBoost(myDna ? window.OH_computeDnaScore(opp, myDna) : 0, opp, myBoostProfile);
     div.innerHTML = `
       ${dnaMatch >= 20 || opp.government_level ? `<div class="score-row">
         ${dnaMatch >= 20 ? `<div class="score-pill match"><span class="sp-label">Match</span><span class="sp-value">${dnaMatch}%</span></div>` : ""}
@@ -146,6 +147,7 @@ function parseSearchQuery(raw) {
       </div>` : ""}
       ${matchBadge}
       <div class="mc-title"><a href="opportunity.html?id=${opp.id}" style="text-decoration:none;color:inherit;">${escapeHtml(oppLabel(opp))}</a></div>
+      ${opp.company ? `<div style="margin:0.1rem 0;">${window.OH_companyLinkHtml(opp.company)}</div>` : ""}
       <div class="mc-meta">
         ${scoreBadge(opp)}
         ${fresh ? `<span class="tag ${fresh.cls}">${fresh.label}</span>` : ""}
@@ -461,6 +463,7 @@ function parseSearchQuery(raw) {
       const profile = await Auth.getProfile(currentUser.id);
       myPreferences = (profile && profile.preferences) || {};
       myDna = profile && profile.onboarding_completed ? profile.dna : null;
+      myBoostProfile = await window.OH_getEventBoostProfile(currentUser.id);
     } catch { myPreferences = {}; }
   }
 

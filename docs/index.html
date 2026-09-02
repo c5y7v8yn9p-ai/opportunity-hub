@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Home</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/theme.css?v=7">
 </head>
 <body>
 
@@ -51,7 +51,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=6"></script>
+  <script src="js/supabase-client.js?v=7"></script>
   <script>
     renderNav("feed");
 
@@ -105,6 +105,7 @@
             ${window.OH_trustBadgeHtml(opp)}
           </div>
           <div class="card-title"><a href="opportunity.html?id=${opp.id}">${escapeHtml(oppLabel(opp))}</a></div>
+          ${opp.company ? `<div style="margin:0.1rem 0;">${window.OH_companyLinkHtml(opp.company)}</div>` : ""}
           <div class="card-text">${escapeHtml(metaLine(opp))}</div>
           ${why ? `<div class="tech-label">WHY THIS MATCHES</div>${why}` : ""}
           <div class="card-footer" style="margin-top:0.7rem;justify-content:flex-end;">
@@ -118,6 +119,7 @@
       window.__ohUserId = user ? user.id : null;
       const profile = user ? await Auth.getProfile(user.id) : null;
       const dna = profile && profile.onboarding_completed ? profile.dna : null;
+      const boostProfile = user ? await window.OH_getEventBoostProfile(user.id) : null;
 
       document.getElementById("greeting-h2").textContent = greetingWord();
 
@@ -143,7 +145,7 @@
 
       const activeOnly = data.filter((o) => o.status === "active");
       const now = Date.now();
-      const scored = data.map((o) => ({ opp: o, match: dna ? window.OH_computeDnaScore(o, dna) : 0 }));
+      const scored = data.map((o) => ({ opp: o, match: window.OH_applyEventBoost(dna ? window.OH_computeDnaScore(o, dna) : 0, o, boostProfile) }));
       const rank = (s) => (dna ? s.match : s.opp.score || 0);
       const isNew = (o) => o.created_at && now - new Date(o.created_at).getTime() < 3 * 86400000;
 

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Opportunity Radar</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=7">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="section-title">Opportunity Radar</div>
+  <div class="section-sub">Every live opportunity plotted by Quality (freshness, completeness, credibility) against Confidence (how sure we are the listing's own data is accurate). Real, computed scores — nothing on this chart is invented.</div>
+
+  <div class="container">
+    <div class="category-row" id="radar-category-row">
+      <span class="category-pill active" data-category="">All</span>
+      <span class="category-pill" data-category="jobs">Jobs</span>
+      <span class="category-pill" data-category="business">Business</span>
+      <span class="category-pill" data-category="funding">Funding</span>
+      <span class="category-pill" data-category="education">Education</span>
+      <span class="category-pill" data-category="government">Government</span>
+    </div>
+    <label class="speculative-toggle-label" id="radar-match-toggle-row" style="display:none;">
+      <input type="checkbox" id="radar-match-toggle">
+      Only show my matches
+    </label>
+    <div class="results-count" id="radar-count"></div>
+    <div class="radar-shell" id="radar-shell">
+      <div class="loading">loading radar…</div>
+    </div>
+  </div>
+
+  <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=7"></script>
+  <script>
+    renderNav("radar");
+
+    const CATEGORY_GROUPS = {
+      jobs: ["full_time", "part_time", "contract", "internship", "apprenticeship"],
+      business: ["freelance", "gig", "service_request", "one_time_task"],
+    };
+
+    let allOpps = [];
+    let myDna = null;
+    let activeCategory = "";
+    let onlyMatches = false;
+
+    function passesCategory(opp) {
+      if (!activeCategory) return true;
+      if (activeCategory === "government") return !!opp.government_level;
+      const hay = ((opp.title || "") + " " + (opp.body || "")).toLowerCase();
+      if (activeCategory === "funding") return /\bfund(ing|ed)?\b|\bgrant\b|\binvestor\b|\bvc\b/.test(hay);
+      if (activeCategory === "education") return /\bcourse\b|\bscholarship\b|\btraining\b|\bstudent\b|\bworkshop\b/.test(hay);
+      if (CATEGORY_GROUPS[activeCategory]) return CATEGORY_GROUPS[activeCategory].includes(opp.opportunity_type);
+      return true;
+    }
+
+    function render() {
+      const shell = document.getElementById("radar-shell");
+      let list = allOpps.filter(passesCategory);
+      if (onlyMatches && myDna) list = list.filter((o) => window.OH_computeDnaScore(o, myDna) >= 25);
+      document.getElementById("radar-count").textContent = list.length + (list.length === 1 ? " opportunity" : " opportunities") + " on the radar";
+
+      if (!list.length) {
+        shell.innerHTML = '<div class="empty">No opportunities match these filters.</div>';
+        return;
+      }
+
+      const width = shell.clientWidth || 800;
+      const height = 480;
+      const pad = 46;
+
+      const colorFor = (opp) => {
+        const t = window.OH_trustState(opp);
+        return t.key === "verified" ? "var(--good)" : t.key === "confirmed" ? "var(--accent-strong)" : t.key === "detected" ? "var(--warn)" : "var(--text-faint)";
+      };
+
+      const points = list.map((opp) => {
+        const q = opp.score || 0;
+        const c = window.OH_computeConfidence(opp);
+        const days = opp.created_at ? (Date.now() - new Date(opp.created_at).getTime()) / 86400000 : 999;
+        const r = days < 3 ? 6 : days < 14 ? 4.5 : 3.5;
+        const x = pad + (q / 100) * (width - pad * 2);
+        const y = height - pad - (c / 100) * (height - pad * 2);
+        return { opp, x, y, r, color: colorFor(opp) };
+      });
+
+      const quadrantLabel = (x, y, text) => `<text x="${x}" y="${y}" class="radar-quadrant-label">${text}</text>`;
+
+      let svg = `<svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" class="radar-svg">
+        <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" class="radar-axis" />
+        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="radar-axis" />
+        <text x="${width - pad}" y="${height - pad + 22}" class="radar-axis-label" text-anchor="end">Quality →</text>
+        <text x="${pad - 8}" y="${pad - 6}" class="radar-axis-label" text-anchor="start">↑ Confidence</text>
+        ${quadrantLabel(width - pad - 8, pad + 18, "STRONG BETS")}
+        ${quadrantLabel(pad + 8, pad + 18, "SAFE, LOW SIGNAL")}
+        ${quadrantLabel(width - pad - 8, height - pad - 8, "VERIFY FIRST")}
+        ${quadrantLabel(pad + 8, height - pad - 8, "LOW PRIORITY")}
+        ${points.map((p) => `<a href="opportunity.html?id=${p.opp.id}"><circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r}" style="fill:${p.color}" class="radar-dot"><title>${escapeHtml(p.opp.title || "Untitled")} — Quality ${p.opp.score || 0}, Confidence ${window.OH_computeConfidence(p.opp)}</title></circle></a>`).join("")}
+      </svg>`;
+
+      shell.innerHTML = svg;
+    }
+
+    async function loadRadar() {
+      const shell = document.getElementById("radar-shell");
+      if (!window.OH_CONFIGURED) { shell.innerHTML = '<div class="empty">Supabase isn\'t configured yet.</div>'; return; }
+
+      const user = await Auth.getUser();
+      const profile = user ? await Auth.getProfile(user.id) : null;
+      myDna = profile && profile.onboarding_completed ? profile.dna : null;
+      if (myDna) document.getElementById("radar-match-toggle-row").style.display = "";
+
+      const { data, error } = await window.sb
+        .from("opportunities")
+        .select("id, title, body, score, status, government_level, opportunity_type, source_type, created_at, last_verified_at")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(400);
+
+      if (error || !data) { shell.innerHTML = '<div class="empty">Could not load the radar right now.</div>'; return; }
+      allOpps = data;
+      render();
+    }
+
+    document.querySelectorAll("#radar-category-row .category-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        activeCategory = pill.dataset.category || "";
+        document.querySelectorAll("#radar-category-row .category-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        render();
+      });
+    });
+    document.getElementById("radar-match-toggle").addEventListener("change", (e) => { onlyMatches = e.target.checked; render(); });
+    window.addEventListener("resize", () => { if (allOpps.length) render(); });
+
+    loadRadar();
+  </script>
+</body>
+</html>

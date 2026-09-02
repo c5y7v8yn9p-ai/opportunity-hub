@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Company</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=7">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div id="site-nav"></div>
+  </div>
+
+  <div class="container narrow" id="company-mount">
+    <div class="loading">loading company…</div>
+  </div>
+
+  <footer>SOURCES: HACKER NEWS · GOOGLE NEWS RSS · YOUTUBE (AUTO, DAILY) + USER-SUBMITTED POSTINGS</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=7"></script>
+  <script>
+    renderNav("");
+
+    const WORK_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
+
+    function oppLabel(opp) { return opp.title || (opp.body || "").slice(0, 60) || "Untitled opportunity"; }
+
+    function miniOppCardHtml(opp) {
+      const quality = window.OH_qualityBucket(opp);
+      const meta = [opp.industries && opp.industries.name, opp.work_mode ? WORK_MODE_LABELS[opp.work_mode] || opp.work_mode : null, opp.city || opp.location]
+        .filter(Boolean).join(" · ");
+      return `
+        <div class="opp-card">
+          <div class="score-row">
+            ${opp.status !== "speculative" ? `<div class="score-pill ${quality.cls}"><span class="sp-label">Quality</span><span class="sp-value">${quality.label}</span></div>` : ""}
+            ${window.OH_trustBadgeHtml(opp)}
+          </div>
+          <div class="card-title"><a href="opportunity.html?id=${opp.id}">${escapeHtml(oppLabel(opp))}</a></div>
+          <div class="card-text">${escapeHtml(meta)}</div>
+          <div class="card-footer" style="margin-top:0.7rem;justify-content:flex-end;">
+            <a class="card-link" href="opportunity.html?id=${opp.id}">${opp.status === "speculative" ? "Read the signal →" : "View →"}</a>
+          </div>
+        </div>`;
+    }
+
+    function signalCardHtml(s) {
+      return `
+        <div class="signal-card">
+          <div class="sc-title"><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a></div>
+          <div class="sc-meta">
+            <span class="news-item-meta">${escapeHtml(s.source || "")} · ${s.published_at ? timeAgo(s.published_at) : ""}</span>
+          </div>
+          ${window.OH_evidenceChainHtml(s)}
+        </div>`;
+    }
+
+    async function loadCompany() {
+      const mount = document.getElementById("company-mount");
+      const params = new URLSearchParams(window.location.search);
+      const name = (params.get("name") || "").trim();
+      if (!name) { mount.innerHTML = '<div class="empty">No company specified.</div>'; return; }
+      if (!window.OH_CONFIGURED) { mount.innerHTML = '<div class="empty">Supabase isn\'t configured yet.</div>'; return; }
+
+      document.title = "OpportunityHub // " + name;
+
+      const [{ data: opps }, { data: signals }] = await Promise.all([
+        window.sb.from("opportunities")
+          .select("*, industries:industry_id ( name )")
+          .ilike("company", name)
+          .in("status", ["active", "speculative"])
+          .order("created_at", { ascending: false })
+          .limit(100),
+        window.sb.from("news_items")
+          .select("id, title, url, source, published_at, signal_type, company, source_quality")
+          .ilike("company", name)
+          .order("published_at", { ascending: false })
+          .limit(50),
+      ]);
+
+      const allOpps = opps || [];
+      const allSignals = signals || [];
+
+      if (!allOpps.length && !allSignals.length) {
+        mount.innerHTML = `
+          <div class="section-title" style="padding-left:0;">${escapeHtml(name)}</div>
+          <div class="tech-label">COMPANY INTELLIGENCE</div>
+          <div class="empty" style="margin-top:0.8rem;">No public postings or signals mention "${escapeHtml(name)}" yet. This page aggregates what OpportunityHub has actually seen — it isn't a company registry.</div>`;
+        return;
+      }
+
+      // Use the casing seen most often in the real data for the heading,
+      // rather than trusting whatever casing was typed into the URL.
+      const displayName =
+        (allOpps.find((o) => o.company)?.company) ||
+        (allSignals.find((s) => s.company)?.company) ||
+        name;
+
+      const activeOpps = allOpps.filter((o) => o.status === "active");
+      const leadOpps = allOpps.filter((o) => o.status === "speculative");
+
+      const allDates = [
+        ...allOpps.map((o) => o.created_at),
+        ...allSignals.map((s) => s.published_at),
+      ].filter(Boolean).map((d) => new Date(d).getTime());
+      const firstSeen = allDates.length ? new Date(Math.min(...allDates)) : null;
+      const lastActivity = allDates.length ? new Date(Math.max(...allDates)) : null;
+
+      mount.innerHTML = `
+        <div class="section-title" style="padding-left:0;">${escapeHtml(displayName)}</div>
+        <div class="tech-label">COMPANY INTELLIGENCE · matched by name across public postings and signals — not a verified registry</div>
+
+        <div class="stat-tiles" style="margin-left:0;margin-right:0;margin-top:0.9rem;">
+          <div class="stat-tile"><div class="st-value">${activeOpps.length}</div><div class="st-label">Open roles</div></div>
+          <div class="stat-tile ${leadOpps.length ? "urgent" : ""}"><div class="st-value">${leadOpps.length}</div><div class="st-label">Leads</div></div>
+          <div class="stat-tile"><div class="st-value">${allSignals.length}</div><div class="st-label">Signals</div></div>
+        </div>
+        ${lastActivity ? `<div class="last-checked" style="margin:0.4rem 0.6rem 0;">First seen ${firstSeen ? firstSeen.toLocaleDateString() : "—"} · last activity ${timeAgo(lastActivity.toISOString())}</div>` : ""}
+
+        ${allOpps.length ? `
+        <div class="section-title">Opportunities</div>
+        <div class="opp-grid">${allOpps.map(miniOppCardHtml).join("")}</div>` : ""}
+
+        ${allSignals.length ? `
+        <div class="section-title">Signals mentioning ${escapeHtml(displayName)}</div>
+        <div style="display:flex;flex-direction:column;gap:0.7rem;">${allSignals.map(signalCardHtml).join("")}</div>` : ""}
+
+        <div class="everything-else-link"><a href="graph.html?focus=${encodeURIComponent(displayName)}">View in Opportunity Graph →</a></div>
+      `;
+    }
+
+    loadCompany();
+  </script>
+</body>
+</html>

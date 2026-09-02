@@ -48,6 +48,20 @@
   }
   window.timeAgo = timeAgo;
 
+  // Normalizes a scraped/free-text company name into a stable key for
+  // grouping and URL-matching (there is no company entity table — company
+  // pages match by name, case/whitespace-insensitively, and say so).
+  function companySlug(name) {
+    return String(name || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+  window.OH_companySlug = companySlug;
+
+  function companyLinkHtml(name) {
+    if (!name) return "";
+    return `<a class="company-link" href="company.html?name=${encodeURIComponent(name)}">${escapeHtml(name)} →</a>`;
+  }
+  window.OH_companyLinkHtml = companyLinkHtml;
+
   function showConfigWarning() {
     if (configured) return;
     const el = document.createElement("div");
@@ -395,6 +409,65 @@
   }
   window.OH_logEvent = logEvent;
 
+  // ---------- outcome-based ranking boost (real, not simulated) ----------
+  // Builds a small profile of what this specific user has actually saved
+  // or clicked apply on, from the events table, and uses it to nudge Match
+  // toward more of the same. This is deliberately a transparent weighted-
+  // overlap boost, not a trained model — there isn't remotely enough data
+  // for one yet, and a fake model would be worse than an honest heuristic.
+  // With no event history it changes nothing (baseline DNA match stands).
+  async function getEventBoostProfile(userId) {
+    if (!window.sb || !userId) return null;
+    try {
+      const { data, error } = await window.sb
+        .from("events")
+        .select("event_type, opportunities:opportunity_id ( industry_id, opportunity_type, work_mode, company )")
+        .eq("profile_id", userId)
+        .in("event_type", ["save", "apply_click", "contact_click"])
+        .limit(300);
+      if (error || !data || !data.length) return null;
+
+      const industries = new Map();
+      const types = new Map();
+      const modes = new Map();
+      const companies = new Map();
+      const weightFor = (t) => (t === "save" ? 1 : 2); // an actual apply/contact click counts for more than a save
+
+      data.forEach((row) => {
+        const opp = row.opportunities;
+        if (!opp) return;
+        const w = weightFor(row.event_type);
+        if (opp.industry_id) industries.set(opp.industry_id, (industries.get(opp.industry_id) || 0) + w);
+        if (opp.opportunity_type) types.set(opp.opportunity_type, (types.get(opp.opportunity_type) || 0) + w);
+        if (opp.work_mode) modes.set(opp.work_mode, (modes.get(opp.work_mode) || 0) + w);
+        if (opp.company) {
+          const key = companySlug(opp.company);
+          companies.set(key, (companies.get(key) || 0) + w);
+        }
+      });
+
+      if (!industries.size && !types.size && !modes.size && !companies.size) return null;
+      return { industries, types, modes, companies, eventCount: data.length };
+    } catch (err) {
+      return null;
+    }
+  }
+  window.OH_getEventBoostProfile = getEventBoostProfile;
+
+  // Applies the boost profile above to a base Match score. Capped so a
+  // history signal alone can't manufacture a 100% match on an otherwise
+  // unrelated listing.
+  function applyEventBoost(baseMatch, opp, boostProfile) {
+    if (!boostProfile) return baseMatch;
+    let boost = 0;
+    if (opp.industry_id && boostProfile.industries.has(opp.industry_id)) boost += 8;
+    if (opp.opportunity_type && boostProfile.types.has(opp.opportunity_type)) boost += 6;
+    if (opp.work_mode && boostProfile.modes.has(opp.work_mode)) boost += 4;
+    if (opp.company && boostProfile.companies.has(companySlug(opp.company))) boost += 12;
+    return Math.max(0, Math.min(100, Math.round(baseMatch + Math.min(20, boost))));
+  }
+  window.OH_applyEventBoost = applyEventBoost;
+
   // ---------- shared nav ----------
   async function renderNav(activeId) {
     const mount = document.getElementById("site-nav");
@@ -405,6 +478,7 @@
       { id: "opportunities", href: "opportunities.html", label: "Opportunities" },
       { id: "leads", href: "leads.html", label: "Leads" },
       { id: "signals", href: "signals.html", label: "Signals" },
+      { id: "radar", href: "radar.html", label: "Radar" },
       { id: "messages", href: "messages.html", label: "Messages" },
     ];
 
