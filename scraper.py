@@ -46,7 +46,7 @@ import sys
 import json
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import requests
 
@@ -84,6 +84,17 @@ HN_QUERIES = ["side hustle", "bootstrapped", "started a business", "side income"
 # Real job-board API queries — these return actual listings, not text to
 # signal-score, so unlike HN/Google News every result here is kept.
 JOB_BOARD_QUERIES = ["remote", "freelance", "part time", "entry level"]
+
+# Daily news dashboard — general business/startup/employment headlines,
+# NOT run through score_signal() (that filter is tuned for personal
+# "someone did a side hustle" anecdotes, too narrow for general news).
+NEWS_DASHBOARD_QUERIES = {
+    "business": ["business news india", "indian economy business"],
+    "startup": ["startup funding india", "indian startup news"],
+    "employment": ["jobs employment hiring india", "layoffs hiring india"],
+}
+NEWS_ITEMS_PER_CATEGORY = 8
+
 
 
 def extract_details(text):
@@ -176,6 +187,106 @@ def fetch_google_news():
         except Exception as e:
             print(f"[GoogleNews] skipped query '{q}': {e}", file=sys.stderr)
     return items
+
+
+def fetch_news_dashboard():
+    """General business/startup/employment headlines for the homepage news
+    dashboard — same free Google News RSS source as fetch_google_news(),
+    but with its own category-specific queries and NO score_signal()
+    filtering (that filter looks for personal "I did a side hustle"
+    anecdotes, which is too narrow for general news headlines)."""
+    from email.utils import parsedate_to_datetime
+
+    items = []
+    seen_urls = set()
+    for category, queries in NEWS_DASHBOARD_QUERIES.items():
+        category_items = []
+        for q in queries:
+            url = f"https://news.google.com/rss/search?q={requests.utils.quote(q)}&hl=en-IN&gl=IN&ceid=IN:en"
+            try:
+                r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+                r.raise_for_status()
+                root = ET.fromstring(r.content)
+                for item in root.findall(".//item"):
+                    title = (item.findtext("title") or "").strip()
+                    link = (item.findtext("link") or "").strip()
+                    if not title or not link or link in seen_urls:
+                        continue
+                    desc_raw = (item.findtext("description") or "").strip()
+                    desc = re.sub("<[^<]+?>", "", desc_raw).strip()
+                    source_el = item.find("source")
+                    source_name = source_el.text.strip() if source_el is not None and source_el.text else "Google News"
+                    pub_raw = (item.findtext("pubDate") or "").strip()
+                    published_at = None
+                    if pub_raw:
+                        try:
+                            published_at = parsedate_to_datetime(pub_raw).isoformat()
+                        except Exception:
+                            published_at = None
+                    seen_urls.add(link)
+                    category_items.append({
+                        "category": category,
+                        "title": title,
+                        "summary": desc[:280],
+                        "url": link,
+                        "source": source_name,
+                        "published_at": published_at,
+                    })
+            except Exception as e:
+                print(f"[NewsDashboard] skipped query '{q}' ({category}): {e}", file=sys.stderr)
+        # newest first, capped per category so the dashboard stays digestible
+        category_items.sort(key=lambda x: x["published_at"] or "", reverse=True)
+        items.extend(category_items[:NEWS_ITEMS_PER_CATEGORY])
+    return items
+
+
+def push_news_to_supabase(items):
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        print("[Supabase] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — skipping news push.",
+              file=sys.stderr)
+        return 0
+    if not items:
+        return 0
+
+    r = requests.post(
+        f"{SUPABASE_URL}/rest/v1/news_items",
+        json=items,
+        headers={
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=ignore-duplicates,return=minimal",
+        },
+        params={"on_conflict": "url"},
+        timeout=30,
+    )
+    if not r.ok:
+        print(f"[Supabase] news insert failed ({r.status_code}): {r.text[:500]}", file=sys.stderr)
+        return 0
+    return len(items)
+
+
+def prune_old_news(days=14):
+    """Keeps the news_items table (and the dashboard) from growing forever
+    — deletes anything older than `days` days."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    try:
+        r = requests.delete(
+            f"{SUPABASE_URL}/rest/v1/news_items",
+            params={"created_at": f"lt.{cutoff}"},
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            },
+            timeout=30,
+        )
+        if not r.ok:
+            print(f"[Supabase] news prune failed ({r.status_code}): {r.text[:300]}", file=sys.stderr)
+    except Exception as e:
+        print(f"[Supabase] news prune skipped: {e}", file=sys.stderr)
+
 
 
 def fetch_youtube():
@@ -723,6 +834,13 @@ def main():
           f"({len(top) - len(new_items)} already present, skipped)")
 
     backfill_missing_coordinates(limit=60)
+
+    # Daily news dashboard (separate table, independent of the opportunity
+    # feed above) — general business/startup/employment headlines.
+    news_items = fetch_news_dashboard()
+    news_inserted = push_news_to_supabase(news_items)
+    print(f"Inserted {news_inserted} news items (duplicates by url skipped)")
+    prune_old_news(days=14)
 
 
 if __name__ == "__main__":

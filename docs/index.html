@@ -24,6 +24,24 @@
     </div>
   </div>
 
+  <div class="news-dashboard" id="news-dashboard">
+    <div class="news-dashboard-title">▸ DAILY NEWS — BUSINESS / STARTUP / EMPLOYMENT</div>
+    <div class="news-columns">
+      <div class="news-column">
+        <div class="news-column-title">Business</div>
+        <div class="news-list" id="news-business"><span class="news-loading">loading…</span></div>
+      </div>
+      <div class="news-column">
+        <div class="news-column-title">Startup</div>
+        <div class="news-list" id="news-startup"><span class="news-loading">loading…</span></div>
+      </div>
+      <div class="news-column">
+        <div class="news-column-title">Employment</div>
+        <div class="news-list" id="news-employment"><span class="news-loading">loading…</span></div>
+      </div>
+    </div>
+  </div>
+
   <div class="map-shell">
     <div class="map-sidebar">
       <div class="filter-bar">
@@ -129,6 +147,51 @@
     let searchTerm = "";
     let sortMode = "newest";
     let myCapabilities = [];
+
+    async function loadNewsDashboard() {
+      if (!window.sb) return;
+      const categories = ["business", "startup", "employment"];
+      try {
+        const { data, error } = await window.sb
+          .from("news_items")
+          .select("category, title, url, source, published_at")
+          .order("published_at", { ascending: false })
+          .limit(90);
+        if (error) throw error;
+
+        const byCategory = { business: [], startup: [], employment: [] };
+        (data || []).forEach((item) => {
+          if (byCategory[item.category]) byCategory[item.category].push(item);
+        });
+
+        categories.forEach((cat) => {
+          const mount = document.getElementById("news-" + cat);
+          const items = byCategory[cat].slice(0, 6);
+          if (!items.length) {
+            mount.innerHTML = '<span class="news-empty">no headlines yet — check back after the next daily refresh</span>';
+            return;
+          }
+          mount.innerHTML = items
+            .map((it) => {
+              const when = it.published_at ? timeAgo(it.published_at) : "";
+              const src = it.source ? escapeHtml(it.source) : "";
+              return (
+                '<a class="news-item" href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' +
+                '<span class="news-item-title">' + escapeHtml(it.title) + '</span>' +
+                '<span class="news-item-meta">' + src + (src && when ? " · " : "") + when + '</span>' +
+                '</a>'
+              );
+            })
+            .join("");
+        });
+      } catch (err) {
+        categories.forEach((cat) => {
+          document.getElementById("news-" + cat).innerHTML =
+            '<span class="news-empty">could not load news (' + escapeHtml(err.message || String(err)) + ')</span>';
+        });
+      }
+    }
+    loadNewsDashboard();
 
     function initMap() {
       map = L.map("leaflet-map", { worldCopyJump: true }).setView([20, 10], 2);
