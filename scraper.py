@@ -236,7 +236,9 @@ def fetch_news_dashboard():
                 print(f"[NewsDashboard] skipped query '{q}' ({category}): {e}", file=sys.stderr)
         # newest first, capped per category so the dashboard stays digestible
         category_items.sort(key=lambda x: x["published_at"] or "", reverse=True)
+        print(f"[NewsDashboard] {category}: found {len(category_items)} items across {len(queries)} queries")
         items.extend(category_items[:NEWS_ITEMS_PER_CATEGORY])
+    print(f"[NewsDashboard] total {len(items)} items fetched across all categories")
     return items
 
 
@@ -248,21 +250,27 @@ def push_news_to_supabase(items):
     if not items:
         return 0
 
-    r = requests.post(
-        f"{SUPABASE_URL}/rest/v1/news_items",
-        json=items,
-        headers={
-            "apikey": SUPABASE_SERVICE_ROLE_KEY,
-            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "resolution=ignore-duplicates,return=minimal",
-        },
-        params={"on_conflict": "url"},
-        timeout=30,
-    )
+    try:
+        r = requests.post(
+            f"{SUPABASE_URL}/rest/v1/news_items",
+            json=items,
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=ignore-duplicates,return=minimal",
+            },
+            params={"on_conflict": "url"},
+            timeout=30,
+        )
+    except Exception as e:
+        print(f"[Supabase] news insert request failed: {e}", file=sys.stderr)
+        return 0
     if not r.ok:
         print(f"[Supabase] news insert failed ({r.status_code}): {r.text[:500]}", file=sys.stderr)
         return 0
+    print(f"[Supabase] news insert request ok ({r.status_code}), sent {len(items)} items "
+          f"(duplicates by url are silently skipped by Postgres, not reported individually)")
     return len(items)
 
 

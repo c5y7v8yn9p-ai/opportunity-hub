@@ -29,9 +29,30 @@ jobs:
         run: python scraper.py
 
       - name: Commit local debug JSON if changed
+        # This step only refreshes a local debug copy of the data (the live
+        # site reads straight from Supabase, not this file), so a failure
+        # here must never fail the whole run — continue-on-error covers
+        # that. The retry loop handles the normal case where the schedule
+        # and a manual run (or two manual runs) overlap and both try to
+        # push at once: whichever commits second just needs to rebase onto
+        # the other's commit and push again.
+        continue-on-error: true
         run: |
           git config user.name "opportunity-hub-bot"
           git config user.email "actions@users.noreply.github.com"
           git add docs/opportunities.json
-          git diff --cached --quiet || git commit -m "chore: refresh debug opportunities.json [skip ci]"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to debug JSON — nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore: refresh debug opportunities.json [skip ci]"
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push attempt $attempt was rejected (remote moved) — rebasing and retrying..."
+            git pull --rebase origin main
+            sleep $((RANDOM % 5 + 2))
+          done
+          echo "Could not push the debug JSON refresh after 5 attempts — leaving it for the next run. This does not affect the live site."
