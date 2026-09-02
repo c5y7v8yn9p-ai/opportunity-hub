@@ -99,6 +99,14 @@ function parseSearchQuery(raw) {
 
   function freshness(opp) {
     if (opp.expires_at && new Date(opp.expires_at) < new Date()) return { label: "Expired", cls: "bad" };
+    // Real deadline awareness — same 5-day window used everywhere else on
+    // the site (homepage Deadline move, lifecycle badge) — takes priority
+    // over the plain freshness read when a listing has one.
+    if (opp.end_date) {
+      const daysLeft = Math.ceil((new Date(opp.end_date).getTime() - Date.now()) / 86400000);
+      if (daysLeft < 0) return { label: "Expired", cls: "bad" };
+      if (daysLeft <= 5) return { label: "Closing Soon", cls: "warn" };
+    }
     const ref = opp.last_verified_at || opp.created_at;
     if (!ref) return null;
     const days = (Date.now() - new Date(ref).getTime()) / 86400000;

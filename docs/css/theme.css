@@ -502,6 +502,21 @@ footer { text-align: center; font-size: 0.7rem; color: var(--text-faint); paddin
 .trust-badge.unverified { border-color: var(--border-strong); color: var(--text-faint); }
 .last-checked { font-size: 0.68rem; color: var(--text-faint); margin-top: 0.3rem; }
 
+/* -- opportunity lifecycle badges -- */
+.lifecycle-badge {
+  display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.66rem; letter-spacing: 0.3px;
+  padding: 0.15rem 0.55rem; border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  color: var(--text-muted); text-transform: uppercase;
+}
+.lifecycle-badge.lifecycle-discovered { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+.lifecycle-badge.lifecycle-new { border-color: var(--good); color: var(--good); background: var(--good-soft); }
+.lifecycle-badge.lifecycle-active { border-color: var(--border-strong); color: var(--text-muted); }
+.lifecycle-badge.lifecycle-closing { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.lifecycle-badge.lifecycle-expired { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+
+/* -- discovery mode prompt (homepage) -- */
+.discovery-prompt { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin-top: 0.7rem; font-size: 0.78rem; color: var(--text-muted); flex-wrap: wrap; }
+
 /* -- fact / signal / inference / prediction taxonomy -- */
 .evidence-chain { display: flex; flex-direction: column; gap: 0.55rem; margin: 0.7rem 0; }
 .evidence-row { display: flex; gap: 0.6rem; align-items: flex-start; }

@@ -396,6 +396,36 @@
   }
   window.OH_evidenceChainHtml = evidenceChainHtml;
 
+  // ---------- opportunity lifecycle ----------
+  // A real, honest state derived only from timestamps/status already on the
+  // row — never a fabricated "trending" or "hot" label with no signal
+  // behind it. Mirrors the Deadline-window logic used on the homepage.
+  const LIFECYCLE_CLOSING_WINDOW_DAYS = 5;
+  function lifecycleState(opp) {
+    if (opp.status && opp.status !== "active" && opp.status !== "speculative") {
+      return { key: "expired", label: "Expired", cls: "lifecycle-expired" };
+    }
+    const now = Date.now();
+    if (opp.end_date) {
+      const daysLeft = Math.ceil((new Date(opp.end_date).getTime() - now) / 86400000);
+      if (daysLeft < 0) return { key: "expired", label: "Expired", cls: "lifecycle-expired" };
+      if (daysLeft <= LIFECYCLE_CLOSING_WINDOW_DAYS) return { key: "closing", label: "Closing Soon", cls: "lifecycle-closing" };
+    }
+    if (opp.created_at) {
+      const days = (now - new Date(opp.created_at).getTime()) / 86400000;
+      if (days < 1) return { key: "discovered", label: "Just Discovered", cls: "lifecycle-discovered" };
+      if (days < 3) return { key: "new", label: "New", cls: "lifecycle-new" };
+    }
+    return { key: "active", label: "Active", cls: "lifecycle-active" };
+  }
+  window.OH_lifecycleState = lifecycleState;
+
+  function lifecycleBadgeHtml(opp) {
+    const s = lifecycleState(opp);
+    return `<span class="lifecycle-badge ${s.cls}">${s.label}</span>`;
+  }
+  window.OH_lifecycleBadgeHtml = lifecycleBadgeHtml;
+
   // ---------- lightweight outcome event logging ----------
   // First honest step toward "the product should learn from outcomes"
   // (spec section 20): capture what happens, don't fake a re-ranking model
