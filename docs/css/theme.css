@@ -429,3 +429,15 @@ footer { text-align: center; font-size: 0.68rem; opacity: 0.5; padding: 2rem 1re
 @media (max-width: 600px) {
   .opp-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Foundation phase: homepage hero CTAs ---------- */
+.hero-cta-row {
+  display: flex; justify-content: center; align-items: center; gap: 0.7rem;
+  flex-wrap: wrap; margin-top: 1rem;
+}
+
+/* ---------- Foundation phase: personalized feed "why" annotations ---------- */
+.card-why {
+  margin-top: 0.4rem; font-size: 0.68rem; color: #00ff00; opacity: 0.8;
+  border-top: 1px dotted rgba(0,255,0,0.35); padding-top: 0.35rem;
+}

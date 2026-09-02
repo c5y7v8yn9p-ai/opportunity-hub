@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpportunityHub // Opportunity</title>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=4">
+<link rel="stylesheet" href="css/theme.css?v=5">
 </head>
 <body>
 
@@ -22,7 +22,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=4"></script>
+  <script src="js/supabase-client.js?v=5"></script>
   <script>
     renderNav("opportunities");
 
@@ -54,6 +54,36 @@
       const s = score || 0;
       const cls = s >= 70 ? "high" : s >= 40 ? "mid" : "low";
       return `<span class="score-badge ${cls}" title="Rule-based: freshness, completeness, credibility — not AI">OPPORTUNITY SCORE ${s}/100</span>`;
+    }
+
+    // ---------- Foundation phase: lightweight "why this might matter" ----------
+    function dnaTokenizeLocal(str) {
+      if (!str) return [];
+      return String(str).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
+    }
+
+    function explainWhyForDetail(opp, dna) {
+      const words = [];
+      let workMode = null, govLevel = null;
+      Object.values(dna || {}).forEach((fields) => {
+        if (!fields || typeof fields !== "object") return;
+        Object.keys(fields).forEach((fk) => {
+          const v = fields[fk];
+          if (typeof v !== "string" || !v) return;
+          if (fk === "work_mode") { workMode = v; return; }
+          if (fk === "government_level") { govLevel = v; return; }
+          words.push(...dnaTokenizeLocal(v));
+        });
+      });
+      const oppText = [opp.title, opp.body, opp.industries && opp.industries.name, opp.department].filter(Boolean).join(" ");
+      const oppWords = new Set(dnaTokenizeLocal(oppText));
+      const matched = [...new Set(words)].filter((w) => oppWords.has(w)).slice(0, 3);
+      const bits = [];
+      if (matched.length) bits.push("mentions " + matched.join(", "));
+      if (workMode && opp.work_mode === workMode) bits.push((WORK_MODE_LABELS[workMode] || workMode) + " work matches what you're looking for");
+      if (govLevel && opp.government_level === govLevel) bits.push("matches your preferred government level");
+      if (!bits.length) return null;
+      return bits.join(". ") + ".";
     }
 
     async function loadDetail() {
@@ -151,6 +181,25 @@
           }
         } catch (err) { alert("Could not update: " + (err.message || err)); }
       });
+
+      if (user) {
+        try {
+          const profile = await Auth.getProfile(user.id);
+          if (profile && profile.onboarding_completed && profile.dna) {
+            const why = explainWhyForDetail(opp, profile.dna);
+            if (why) {
+              const metaRow = mount.querySelector(".detail-meta-row");
+              if (metaRow) {
+                const holder = document.createElement("div");
+                holder.className = "why-matters-box";
+                holder.style.margin = "0.9rem 0";
+                holder.innerHTML = `<div class="wm-label">🧠 Why This Might Matter To You</div><div class="wm-explain">${escapeHtml(why)}</div>`;
+                metaRow.insertAdjacentElement("afterend", holder);
+              }
+            }
+          }
+        } catch (err) { /* silent — annotation is a nice-to-have, not critical */ }
+      }
 
       if (opp.signal_id) {
         const { data: signal } = await window.sb

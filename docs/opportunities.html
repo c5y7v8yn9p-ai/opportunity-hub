@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="css/theme.css?v=4">
+<link rel="stylesheet" href="css/theme.css?v=5">
 </head>
 <body>
 
@@ -19,7 +19,7 @@
   </div>
 
   <div class="section-title">Opportunities Database</div>
-  <div class="section-sub">Every live listing — search, filter by industry, type, work mode and experience level, or browse the map.</div>
+  <div class="section-sub">Every live listing — search, filter by industry, type, work mode, experience level and government category, or browse the map.</div>
 
   <div class="map-shell">
     <div class="map-sidebar">
@@ -66,6 +66,22 @@
             <span class="chip" data-exp="beginner">Entry</span>
             <span class="chip" data-exp="intermediate">Mid</span>
             <span class="chip" data-exp="advanced">Senior</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Government</div>
+          <div class="chip-row" id="gov-chips">
+            <span class="chip active" data-gov="">Any</span>
+            <span class="chip" data-gov="central">Central</span>
+            <span class="chip" data-gov="state">State</span>
+            <span class="chip" data-gov="psu">PSU</span>
+            <span class="chip" data-gov="railways">Railways</span>
+            <span class="chip" data-gov="banking">Banking</span>
+            <span class="chip" data-gov="defence">Defence</span>
+            <span class="chip" data-gov="police">Police</span>
+            <span class="chip" data-gov="teaching">Teaching</span>
+            <span class="chip" data-gov="healthcare">Healthcare</span>
+            <span class="chip" data-gov="administrative">Administrative</span>
           </div>
         </div>
         <select class="search-input" id="sort-select" style="margin-top:0.7rem;">
@@ -131,8 +147,8 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=4"></script>
-  <script src="js/opportunities-feed.js?v=2"></script>
+  <script src="js/supabase-client.js?v=5"></script>
+  <script src="js/opportunities-feed.js?v=3"></script>
   <script>
     renderNav("opportunities");
     // Saved-search deep links (?industry=&type=&mode=&exp=&q=&sort=&speculative=1)

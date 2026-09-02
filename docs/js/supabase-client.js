@@ -176,6 +176,22 @@
         .eq("id", userId);
       if (error) throw error;
     },
+    // ---------- Foundation phase: User Opportunity DNA / onboarding ----------
+    async saveDna(userId, { dna, intents }) {
+      if (!window.sb || !userId) return;
+      const { error } = await window.sb
+        .from("profiles")
+        .update({ dna, intents, onboarding_completed: true, onboarding_skipped: false })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    async skipOnboarding(userId) {
+      if (!window.sb || !userId) return;
+      await window.sb
+        .from("profiles")
+        .update({ onboarding_skipped: true })
+        .eq("id", userId);
+    },
   };
   window.Auth = Auth;
 
@@ -185,7 +201,7 @@
     if (!mount) return;
 
     const links = [
-      { id: "feed", href: "index.html", label: "Feed" },
+      { id: "feed", href: "index.html", label: "Home" },
       { id: "opportunities", href: "opportunities.html", label: "Opportunities" },
       { id: "signals", href: "signals.html", label: "Signals" },
       { id: "post", href: "post.html", label: "Post" },

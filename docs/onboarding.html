@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpportunityHub // Get Started</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=5">
+</head>
+<body>
+
+  <div class="header">
+    <h1><a href="index.html">═ OpportunityHub ═</a></h1>
+    <div class="tagline">Tell us what you're looking for</div>
+    <div id="site-nav"></div>
+  </div>
+
+  <div id="login-gate" class="container narrow" style="display:none;">
+    <div class="value-prop">
+      <h2>PERSONALIZE YOUR FEED</h2>
+      <div class="sub">Log in (or create a free account) so we can save what you're looking for and match opportunities to you.</div>
+    </div>
+    <div class="form-box" style="text-align:center;">
+      <a class="btn-primary" href="auth.html?redirect=onboarding.html" style="display:inline-block;">Log In / Sign Up</a>
+      <div style="margin-top:1rem;">
+        <a href="index.html" style="font-size:0.78rem;">Continue without an account — explore without personalization</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="step-1" style="display:none;">
+    <div class="value-prop">
+      <h2>WHAT ARE YOU LOOKING FOR?</h2>
+      <div class="sub">Pick as many as apply. We'll ask a couple of quick questions for each, then personalize your feed — nothing here is shared or sold.</div>
+    </div>
+    <div class="container narrow">
+      <div class="chip-row" id="intent-chips" style="flex-wrap:wrap; justify-content:center; max-height:none; overflow:visible; padding:0.4rem 0;"></div>
+      <div style="text-align:center; margin-top:1.4rem;">
+        <button class="btn-primary" id="intents-continue-btn">Continue →</button>
+        <div style="margin-top:0.9rem;">
+          <a href="#" id="skip-link" style="font-size:0.76rem;">Skip for now — explore without personalization</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="step-2" class="container narrow" style="display:none;">
+    <div class="box-title" style="margin-top:0;">A few quick questions</div>
+    <div class="section-sub" style="margin:-0.3rem 0 1rem;">Everything's optional — answer what you can, skip the rest.</div>
+    <div id="question-blocks"></div>
+    <div style="display:flex; gap:0.6rem; margin-top:1rem; flex-wrap:wrap;">
+      <button class="btn-primary" id="finish-btn" style="flex:1;">Save &amp; Find My Opportunities →</button>
+      <button class="btn-secondary" id="back-btn">← Back</button>
+    </div>
+    <div class="form-msg" id="onboarding-msg"></div>
+  </div>
+
+  <footer>YOUR ANSWERS PERSONALIZE YOUR FEED ONLY — NOTHING IS SHARED OR SOLD</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js?v=5"></script>
+  <script>
+    renderNav(null);
+
+    // ---------- intent -> question-cluster map ----------
+    const INTENTS = [
+      { key: "find_job", label: "Find a job", cluster: "job" },
+      { key: "government_jobs", label: "Government jobs", cluster: "government" },
+      { key: "freelance_work", label: "Freelance work", cluster: "freelance" },
+      { key: "find_clients", label: "Find clients", cluster: "clients" },
+      { key: "grow_business", label: "Grow my business", cluster: "clients" },
+      { key: "funding", label: "Funding", cluster: "capital" },
+      { key: "grants", label: "Grants", cluster: "capital" },
+      { key: "tenders", label: "Tenders", cluster: "tenders" },
+      { key: "scholarships", label: "Scholarships", cluster: "education" },
+      { key: "internships", label: "Internships", cluster: "job" },
+      { key: "projects", label: "Projects", cluster: "freelance" },
+      { key: "partnerships", label: "Partnerships", cluster: "clients" },
+      { key: "investment", label: "Investment", cluster: "capital" },
+      { key: "training", label: "Training", cluster: "education" },
+      { key: "explore", label: "Explore opportunities", cluster: null },
+    ];
+
+    const CLUSTERS = {
+      job: {
+        title: "Job search details",
+        fields: [
+          { key: "role", label: "What kind of role or work are you looking for?", type: "text", placeholder: "e.g. video editor, accountant, delivery" },
+          { key: "industries", label: "Industries you're interested in (optional)", type: "text", placeholder: "e.g. media, healthcare, logistics" },
+          { key: "location", label: "City / region", type: "text", placeholder: "e.g. Mumbai, or 'anywhere in India'" },
+          { key: "work_mode", label: "Work mode", type: "select", options: [["", "Any"], ["remote", "Remote"], ["hybrid", "Hybrid"], ["local", "Local"], ["relocation", "Willing to relocate"], ["travel", "Travel-based"]] },
+          { key: "experience_level", label: "Experience level", type: "select", options: [["", "Any"], ["no_experience", "No experience"], ["beginner", "Entry"], ["intermediate", "Mid"], ["advanced", "Senior"]] },
+          { key: "salary_expectation", label: "Salary expectation (optional)", type: "text", placeholder: "e.g. ₹25,000+/month, or 'flexible'" },
+        ],
+      },
+      government: {
+        title: "Government job details",
+        fields: [
+          { key: "qualification", label: "Highest qualification", type: "text", placeholder: "e.g. B.Com, 12th pass, B.Tech" },
+          { key: "age", label: "Age", type: "number", placeholder: "e.g. 26" },
+          { key: "state", label: "State", type: "text", placeholder: "e.g. Maharashtra" },
+          { key: "city", label: "City", type: "text", placeholder: "e.g. Pune" },
+          { key: "departments", label: "Preferred departments (optional)", type: "text", placeholder: "e.g. Railways, Banking, Police" },
+          { key: "government_level", label: "Government level", type: "select", options: [["", "Any"], ["central", "Central"], ["state", "State"], ["psu", "PSU"], ["railways", "Railways"], ["banking", "Banking"], ["defence", "Defence"], ["police", "Police"], ["teaching", "Teaching"], ["healthcare", "Healthcare"], ["administrative", "Administrative"]] },
+          { key: "employment_type", label: "Permanent or contract?", type: "select", options: [["", "Either"], ["permanent", "Permanent"], ["contract", "Contract"]] },
+          { key: "salary_preference", label: "Salary preference (optional)", type: "text" },
+          { key: "relocate", label: "Willing to relocate?", type: "checkbox" },
+        ],
+      },
+      freelance: {
+        title: "Freelance / project work details",
+        fields: [
+          { key: "services", label: "What services or skills do you offer?", type: "text", placeholder: "e.g. video editing, web design, copywriting" },
+          { key: "work_mode", label: "Work mode", type: "select", options: [["", "Any"], ["remote", "Remote"], ["hybrid", "Hybrid"], ["local", "Local"]] },
+          { key: "rate_expectation", label: "Rate expectation (optional)", type: "text", placeholder: "e.g. ₹500/hr, or 'depends on project'" },
+          { key: "availability", label: "Availability", type: "select", options: [["", "Any"], ["full_time", "Full-time"], ["part_time", "Part-time"], ["project_based", "Project-based"]] },
+        ],
+      },
+      clients: {
+        title: "Client / business growth details",
+        fields: [
+          { key: "what_you_sell", label: "What do you sell or offer?", type: "text", placeholder: "e.g. marketing services, software, manufacturing" },
+          { key: "target_industries", label: "Target industries", type: "text", placeholder: "e.g. startups, retail, healthcare" },
+          { key: "target_company_size", label: "Target company size", type: "select", options: [["", "Any"], ["startup", "Startup"], ["smb", "Small/medium business"], ["mid_market", "Mid-market"], ["enterprise", "Enterprise"]] },
+          { key: "location", label: "Target location", type: "text", placeholder: "e.g. Bangalore, or 'pan-India'" },
+          { key: "minimum_deal_size", label: "Minimum deal size (optional)", type: "text" },
+        ],
+      },
+      capital: {
+        title: "Funding / grants / investment details",
+        fields: [
+          { key: "stage", label: "Stage", type: "select", options: [["", "Any"], ["idea", "Idea stage"], ["early", "Early stage"], ["growth", "Growth stage"], ["established", "Established"]] },
+          { key: "amount_needed", label: "Amount needed (optional)", type: "text", placeholder: "e.g. ₹10 lakh" },
+          { key: "industry", label: "Industry", type: "text" },
+          { key: "region", label: "Region", type: "text" },
+        ],
+      },
+      tenders: {
+        title: "Tender details",
+        fields: [
+          { key: "business_type", label: "Business type / registration", type: "text", placeholder: "e.g. MSME, private limited" },
+          { key: "industries_served", label: "Industries you serve", type: "text" },
+          { key: "region", label: "Region you operate in", type: "text" },
+          { key: "certifications", label: "Certifications (optional)", type: "text", placeholder: "e.g. ISO, GST registered" },
+          { key: "typical_project_size", label: "Typical project size (optional)", type: "text" },
+        ],
+      },
+      education: {
+        title: "Scholarship / training details",
+        fields: [
+          { key: "education_level", label: "Education level", type: "select", options: [["", "Any"], ["high_school", "High school"], ["undergraduate", "Undergraduate"], ["postgraduate", "Postgraduate"], ["doctorate", "Doctorate"]] },
+          { key: "course_or_field", label: "Course / field of study", type: "text" },
+          { key: "country", label: "Country", type: "text", placeholder: "e.g. India, or 'open to abroad'" },
+          { key: "academic_interests", label: "Academic interests (optional)", type: "text" },
+          { key: "budget", label: "Budget (optional)", type: "text" },
+        ],
+      },
+    };
+
+    let me = null;
+    let existingDna = {};
+    let selectedIntents = new Set();
+
+    function renderIntentChips() {
+      const mount = document.getElementById("intent-chips");
+      mount.innerHTML = "";
+      INTENTS.forEach((intent) => {
+        const chip = document.createElement("span");
+        chip.className = "chip" + (selectedIntents.has(intent.key) ? " active" : "");
+        chip.style.cssText = "font-size:0.82rem; padding:0.55rem 1rem;";
+        chip.textContent = intent.label;
+        chip.addEventListener("click", () => {
+          if (selectedIntents.has(intent.key)) selectedIntents.delete(intent.key);
+          else selectedIntents.add(intent.key);
+          renderIntentChips();
+        });
+        mount.appendChild(chip);
+      });
+    }
+
+    function fieldHtml(clusterKey, field, existingValue) {
+      const id = `f_${clusterKey}_${field.key}`;
+      if (field.type === "select") {
+        const opts = field.options
+          .map(([v, label]) => `<option value="${v}" ${existingValue === v ? "selected" : ""}>${label}</option>`)
+          .join("");
+        return `<div class="form-row"><label>${field.label}</label><select id="${id}">${opts}</select></div>`;
+      }
+      if (field.type === "checkbox") {
+        return `<label class="speculative-toggle-label" style="display:block;"><input type="checkbox" id="${id}" ${existingValue ? "checked" : ""}> ${field.label}</label>`;
+      }
+      const val = existingValue ? String(existingValue).replace(/"/g, "&quot;") : "";
+      return `<div class="form-row"><label>${field.label}</label><input type="${field.type}" id="${id}" value="${val}" placeholder="${field.placeholder || ""}"></div>`;
+    }
+
+    function renderQuestionBlocks() {
+      const clusterKeys = [];
+      selectedIntents.forEach((key) => {
+        const intent = INTENTS.find((i) => i.key === key);
+        if (intent && intent.cluster && !clusterKeys.includes(intent.cluster)) clusterKeys.push(intent.cluster);
+      });
+      const mount = document.getElementById("question-blocks");
+      if (!clusterKeys.length) {
+        mount.innerHTML = '<div class="empty">Nothing more to ask — click Save to continue.</div>';
+        return;
+      }
+      mount.innerHTML = clusterKeys
+        .map((ck) => {
+          const cluster = CLUSTERS[ck];
+          const existing = existingDna[ck] || {};
+          return `<div class="form-box"><div class="box-title" style="margin-top:0;font-size:0.85rem;">${cluster.title}</div>${cluster.fields
+            .map((f) => fieldHtml(ck, f, existing[f.key]))
+            .join("")}</div>`;
+        })
+        .join("");
+    }
+
+    function collectDna() {
+      const dna = {};
+      selectedIntents.forEach((key) => {
+        const intent = INTENTS.find((i) => i.key === key);
+        if (!intent || !intent.cluster || dna[intent.cluster]) return;
+        const cluster = CLUSTERS[intent.cluster];
+        const values = {};
+        cluster.fields.forEach((f) => {
+          const el = document.getElementById(`f_${intent.cluster}_${f.key}`);
+          if (!el) return;
+          values[f.key] = f.type === "checkbox" ? el.checked : el.value.trim();
+        });
+        dna[intent.cluster] = values;
+      });
+      return dna;
+    }
+
+    function showStep(step) {
+      document.getElementById("step-1").style.display = step === 1 ? "block" : "none";
+      document.getElementById("step-2").style.display = step === 2 ? "block" : "none";
+    }
+
+    async function init() {
+      if (!window.OH_CONFIGURED) {
+        document.getElementById("login-gate").style.display = "block";
+        document.querySelector("#login-gate .sub").textContent = "Supabase isn't configured yet — see SETUP_GUIDE.md.";
+        return;
+      }
+      me = await Auth.getUser();
+      if (!me) {
+        document.getElementById("login-gate").style.display = "block";
+        return;
+      }
+      const profile = await Auth.getProfile(me.id);
+      existingDna = (profile && profile.dna) || {};
+      const existingIntents = (profile && profile.intents) || [];
+      selectedIntents = new Set(existingIntents);
+      renderIntentChips();
+      showStep(1);
+    }
+
+    document.getElementById("intents-continue-btn").addEventListener("click", () => {
+      renderQuestionBlocks();
+      showStep(2);
+    });
+
+    document.getElementById("back-btn").addEventListener("click", () => showStep(1));
+
+    document.getElementById("skip-link").addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (me) await Auth.skipOnboarding(me.id);
+      window.location.href = "index.html";
+    });
+
+    document.getElementById("finish-btn").addEventListener("click", async () => {
+      const msg = document.getElementById("onboarding-msg");
+      const btn = document.getElementById("finish-btn");
+      btn.disabled = true;
+      try {
+        const dna = collectDna();
+        await Auth.saveDna(me.id, { dna, intents: Array.from(selectedIntents) });
+        msg.className = "form-msg ok";
+        msg.textContent = "Saved — building your feed…";
+        setTimeout(() => { window.location.href = "index.html"; }, 500);
+      } catch (err) {
+        msg.className = "form-msg err";
+        msg.textContent = err.message || "Could not save — try again.";
+        btn.disabled = false;
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

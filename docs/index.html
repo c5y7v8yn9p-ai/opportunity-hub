@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="css/theme.css?v=4">
+<link rel="stylesheet" href="css/theme.css?v=5">
 </head>
 <body>
 
@@ -19,9 +19,15 @@
   </div>
 
   <div class="value-prop">
-    <h2>FIND OPPORTUNITIES. NOT JUST NEWS.</h2>
-    <div class="sub">Jobs, freelance work, business leads, funding, and emerging opportunities — discovered from across the web and ranked for action.</div>
+    <h2>FIND WHAT'S NEXT.</h2>
+    <div class="sub">Tell us what you're looking for. We'll find the opportunities that matter to you.</div>
+    <div class="hero-cta-row" id="hero-cta-row">
+      <a class="btn-primary" id="hero-cta-primary" href="onboarding.html">START FINDING OPPORTUNITIES →</a>
+      <a class="btn-secondary" id="hero-cta-secondary" href="#explore-title">EXPLORE WITHOUT PERSONALIZATION</a>
+    </div>
   </div>
+
+  <div id="personalized-mount"></div>
 
   <div class="section-title" id="signals-title">Today's Signals</div>
   <div class="section-sub">Business, startup and employment activity from the last 24 hours — the news behind the opportunities below. <a href="signals.html">→ view all signals</a></div>
@@ -51,7 +57,7 @@
     </div>
   </div>
 
-  <div class="section-title">Opportunity Discovery</div>
+  <div class="section-title" id="explore-title">Opportunity Discovery</div>
   <div class="section-sub">Search the live database below, or jump straight to the full tools.</div>
   <div class="feed-cta">
     <a class="btn-secondary" href="opportunities.html">→ Full Opportunities Database</a>
@@ -129,8 +135,8 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/supabase-client.js?v=4"></script>
-  <script src="js/opportunities-feed.js?v=2"></script>
+  <script src="js/supabase-client.js?v=5"></script>
+  <script src="js/opportunities-feed.js?v=3"></script>
   <script>
     renderNav("feed");
 
@@ -255,8 +261,137 @@
       }
     }
 
+    function humanizeIntents(intents) {
+      if (!intents || !intents.length) return "your interests";
+      return intents.map((k) => k.replace(/_/g, " ")).join(", ");
+    }
+
+    function renderPersonalizedSections(profile) {
+      const mount = document.getElementById("personalized-mount");
+      if (!mount || typeof window.OH_getAllOpportunities !== "function") return;
+      const allOpps = window.OH_getAllOpportunities();
+      if (!allOpps.length) { mount.innerHTML = ""; return; }
+      const dna = profile.dna || {};
+      const intents = profile.intents || [];
+
+      const scored = allOpps.map((o) => ({ opp: o, dnaScore: window.OH_computeDnaScore(o, dna) }));
+      const now = Date.now();
+      const isNew = (o) => o.created_at && now - new Date(o.created_at).getTime() < 3 * 86400000;
+      const isExpiringSoon = (o) =>
+        o.expires_at && new Date(o.expires_at).getTime() > now && new Date(o.expires_at).getTime() - now < 7 * 86400000;
+
+      const topMatches = scored.filter((s) => s.dnaScore >= 25).sort((a, b) => b.dnaScore - a.dnaScore).slice(0, 6);
+      const topIds = new Set(topMatches.map((s) => s.opp.id));
+
+      const newForYou = scored
+        .filter((s) => !topIds.has(s.opp.id) && s.dnaScore >= 12 && isNew(s.opp))
+        .sort((a, b) => new Date(b.opp.created_at) - new Date(a.opp.created_at))
+        .slice(0, 6);
+      const newIds = new Set(newForYou.map((s) => s.opp.id));
+
+      const actNow = scored
+        .filter(
+          (s) =>
+            !topIds.has(s.opp.id) &&
+            !newIds.has(s.opp.id) &&
+            (isExpiringSoon(s.opp) || (s.opp.status === "speculative" && s.dnaScore >= 20))
+        )
+        .sort((a, b) => {
+          const ea = a.opp.expires_at ? new Date(a.opp.expires_at).getTime() : Infinity;
+          const eb = b.opp.expires_at ? new Date(b.opp.expires_at).getTime() : Infinity;
+          return ea - eb;
+        })
+        .slice(0, 6);
+      const actIds = new Set(actNow.map((s) => s.opp.id));
+
+      const outside = scored
+        .filter(
+          (s) =>
+            !topIds.has(s.opp.id) && !newIds.has(s.opp.id) && !actIds.has(s.opp.id) &&
+            s.dnaScore < 12 && (s.opp.score || 0) >= 60
+        )
+        .sort((a, b) => (b.opp.score || 0) - (a.opp.score || 0))
+        .slice(0, 4);
+
+      const sections = [
+        { key: "top", title: "🔥 TOP MATCHES", items: topMatches },
+        { key: "new", title: "⚡ NEW FOR YOU", items: newForYou },
+        { key: "act", title: "🚨 ACT NOW", items: actNow },
+        { key: "outside", title: "🌎 OUTSIDE YOUR USUAL SEARCH", items: outside },
+      ].filter((s) => s.items.length);
+
+      if (!sections.length) {
+        mount.innerHTML = `
+          <div class="why-matters-box">
+            <div class="wm-label">Why You're Seeing This</div>
+            <div class="wm-explain">Based on what you told us: ${escapeHtml(humanizeIntents(intents))}. We don't have strong matches yet — check back as new opportunities come in, or <a href="onboarding.html">refine your preferences →</a></div>
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <div class="why-matters-box">
+          <div class="wm-label">🧠 Why You're Seeing This</div>
+          <div class="wm-explain">Based on what you told us: ${escapeHtml(humanizeIntents(intents))}. <a href="onboarding.html">Edit your preferences →</a></div>
+          <div class="wm-stats">
+            <div class="wm-stat"><b>${topMatches.length}</b>high matches</div>
+            <div class="wm-stat"><b>${newForYou.length}</b>new for you</div>
+            <div class="wm-stat"><b>${actNow.length}</b>need action</div>
+          </div>
+        </div>`;
+
+      sections.forEach((s) => {
+        html += `<div class="section-title">${s.title}</div><div class="opp-grid" id="personalized-${s.key}"></div>`;
+      });
+      mount.innerHTML = html;
+
+      sections.forEach((s) => {
+        const grid = document.getElementById("personalized-" + s.key);
+        s.items.forEach((item) => {
+          const card = window.OH_renderCard(item.opp);
+          let why = null;
+          if (s.key === "top" || s.key === "new") {
+            why = window.OH_explainDnaMatch(item.opp, dna);
+          } else if (s.key === "act") {
+            why = isExpiringSoon(item.opp) ? "⏰ Closing soon" : "💡 Early signal — verify directly before acting";
+          } else if (s.key === "outside") {
+            why = "🌎 High quality pick outside your usual search";
+          }
+          if (why) {
+            const whyEl = document.createElement("div");
+            whyEl.className = "card-why";
+            whyEl.textContent = why;
+            card.appendChild(whyEl);
+          }
+          grid.appendChild(card);
+        });
+      });
+    }
+
+    async function initPersonalization(feedReadyPromise) {
+      const primary = document.getElementById("hero-cta-primary");
+      if (!window.sb) return;
+      try {
+        const user = await Auth.getUser();
+        if (!user) return;
+        const profile = await Auth.getProfile(user.id);
+        if (!profile || !profile.onboarding_completed) return;
+
+        if (primary) {
+          primary.textContent = "VIEW YOUR MATCHES →";
+          primary.href = "#personalized-mount";
+        }
+
+        await feedReadyPromise;
+        renderPersonalizedSections(profile);
+      } catch (err) {
+        /* leave default state on any error */
+      }
+    }
+
     loadNewsDashboard();
-    initOpportunitiesFeed();
+    const feedReady = initOpportunitiesFeed();
+    initPersonalization(feedReady);
   </script>
 </body>
 </html>

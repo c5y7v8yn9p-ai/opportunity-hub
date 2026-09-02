@@ -3,7 +3,7 @@
 // full database page). Both pages include this file after supabase-client.js
 // and Leaflet + Leaflet.markercluster, and provide the same container IDs:
 //   #search-input #industry-chips #type-chips #workmode-chips
-//   #experience-chips #sort-select #results-count #opportunities
+//   #experience-chips #gov-chips #sort-select #results-count #opportunities
 //   #leaflet-map #report-modal (+ its fields) #map-filter-note
 //   #save-search-name #save-search-btn #save-search-msg (optional — only
 //   present on pages with the full filter bar, i.e. opportunities.html)
@@ -21,6 +21,11 @@ const EXPERIENCE_LABELS = {
   advanced: "Senior", any: "Any level",
 };
 const WORK_MODE_LABELS = { remote: "Remote", hybrid: "Hybrid", local: "Local", relocation: "Relocation", travel: "Travel" };
+const GOV_LEVEL_LABELS = {
+  central: "Central Govt", state: "State Govt", psu: "PSU", railways: "Railways", banking: "Banking",
+  defence: "Defence", police: "Police", teaching: "Teaching", healthcare: "Healthcare",
+  administrative: "Administrative", other: "Other Govt",
+};
 
 // Words the search box recognizes as filters rather than free text — this
 // is the "search itself is the AI interface" from the spec: no chatbot,
@@ -56,6 +61,7 @@ function parseSearchQuery(raw) {
   let activeType = "";
   let activeWorkMode = "";
   let activeExperience = "";
+  let activeGovLevel = "";
   let searchTerm = "";
   let sortMode = "recommended";
   let myCapabilities = [];
@@ -194,6 +200,7 @@ function parseSearchQuery(raw) {
     if (activeType) list = list.filter((o) => o.opportunity_type === activeType);
     if (activeWorkMode) list = list.filter((o) => o.work_mode === activeWorkMode);
     if (activeExperience) list = list.filter((o) => o.experience_level === activeExperience);
+    if (activeGovLevel) list = list.filter((o) => o.government_level === activeGovLevel);
     if (mapFilterIds) list = list.filter((o) => mapFilterIds.has(o.id));
     if (searchTerm) {
       const parsed = parseSearchQuery(searchTerm);
@@ -429,6 +436,7 @@ function parseSearchQuery(raw) {
       type: activeType || "",
       mode: activeWorkMode || "",
       exp: activeExperience || "",
+      gov: activeGovLevel || "",
       q: searchTerm || "",
       sort: sortMode || "recommended",
       speculative: !!showSpeculative,
@@ -442,6 +450,7 @@ function parseSearchQuery(raw) {
     if (activeType) parts.push(OPPORTUNITY_TYPE_LABELS[activeType] || activeType);
     if (activeWorkMode) parts.push(WORK_MODE_LABELS[activeWorkMode] || activeWorkMode);
     if (activeExperience) parts.push(EXPERIENCE_LABELS[activeExperience] || activeExperience);
+    if (activeGovLevel) parts.push(GOV_LEVEL_LABELS[activeGovLevel] || activeGovLevel);
     if (searchTerm) parts.push(`"${searchTerm}"`);
     return parts.length ? parts.join(" · ") : "All opportunities";
   }
@@ -474,7 +483,7 @@ function parseSearchQuery(raw) {
   // text — a default search box would be confusing, not helpful).
   async function applyIncomingState() {
     const params = new URLSearchParams(window.location.search);
-    const hasParams = ["industry", "type", "mode", "exp", "q", "sort", "speculative"].some((k) => params.has(k));
+    const hasParams = ["industry", "type", "mode", "exp", "gov", "q", "sort", "speculative"].some((k) => params.has(k));
     const prefs = myPreferences || {};
 
     // Preferences only cover work mode / experience / sort / speculative —
@@ -484,6 +493,7 @@ function parseSearchQuery(raw) {
     const type = params.get("type") || "";
     const mode = params.get("mode") || (!hasParams && prefs.mode) || "";
     const exp = params.get("exp") || (!hasParams && prefs.exp) || "";
+    const gov = params.get("gov") || "";
     const q = params.get("q") || "";
     const sort = params.get("sort") || (!hasParams && prefs.sort) || null;
     const speculative = params.get("speculative") === "1" || (!hasParams && !!prefs.speculative);
@@ -494,6 +504,7 @@ function parseSearchQuery(raw) {
     preselectChip("type-chips", "type", type);
     preselectChip("workmode-chips", "mode", mode);
     preselectChip("experience-chips", "exp", exp);
+    preselectChip("gov-chips", "gov", gov);
 
     if (q) {
       const input = document.getElementById("search-input");
@@ -565,6 +576,7 @@ function parseSearchQuery(raw) {
     wireChipRow("workmode-chips", "mode", (v) => { activeWorkMode = v; render(); });
     wireChipRow("type-chips", "type", (v) => { activeType = v; render(); });
     wireChipRow("experience-chips", "exp", (v) => { activeExperience = v; render(); });
+    wireChipRow("gov-chips", "gov", (v) => { activeGovLevel = v; render(); });
 
     const specToggle = document.getElementById("speculative-toggle");
     if (specToggle) specToggle.addEventListener("change", (e) => { showSpeculative = e.target.checked; loadFeed(); });
@@ -582,6 +594,96 @@ function parseSearchQuery(raw) {
     await applyIncomingState();
     await loadFeed();
   }
+
+  // ---------- Foundation phase: DNA-based personalization ----------
+  // Exposed so index.html can reuse the same card renderer + already-fetched
+  // opportunity list for the personalized feed sections, instead of
+  // duplicating fetch/render logic. See computeDnaScore below.
+  window.OH_renderCard = renderMiniCard;
+  window.OH_getAllOpportunities = () => allOpps;
+  window.OH_getCurrentUser = () => currentUser;
+
+  function dnaTokenize(str) {
+    if (!str) return [];
+    return String(str).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
+  }
+
+  // Lightweight, explainable heuristic — not a trained model. Keyword overlap
+  // between everything the user typed during onboarding (dna) and an
+  // opportunity's text, plus small bonuses for exact-match fields (location,
+  // work mode, government level), blended with the existing quality score.
+  // Deliberately simple per spec: "no big recommendation engine before data."
+  function computeDnaScore(opp, dna) {
+    if (!dna || !Object.keys(dna).length) return 0;
+    const profileWords = [];
+    const locations = [];
+    let workMode = null;
+    let govLevel = null;
+    Object.values(dna).forEach((fields) => {
+      if (!fields || typeof fields !== "object") return;
+      Object.keys(fields).forEach((fk) => {
+        const v = fields[fk];
+        if (typeof v !== "string" || !v) return;
+        if (fk === "work_mode") { workMode = v; return; }
+        if (fk === "government_level") { govLevel = v; return; }
+        if (["location", "state", "city", "region"].includes(fk)) { locations.push(v.toLowerCase()); return; }
+        profileWords.push(...dnaTokenize(v));
+      });
+    });
+
+    const oppText = [
+      opp.title, opp.body, opp.industries && opp.industries.name, opp.department,
+      Array.isArray(opp.skills) ? opp.skills.join(" ") : "",
+    ].filter(Boolean).join(" ");
+    const oppWords = new Set(dnaTokenize(oppText));
+    let overlap = 0;
+    profileWords.forEach((w) => { if (oppWords.has(w)) overlap++; });
+    const overlapRatio = profileWords.length ? overlap / profileWords.length : 0;
+    let keywordScore = Math.min(60, overlapRatio * 200);
+
+    let bonus = 0;
+    const oppLoc = (opp.city || opp.location || "").toLowerCase();
+    if (oppLoc && locations.some((l) => oppLoc.includes(l) || l.includes(oppLoc))) bonus += 15;
+    if (workMode && opp.work_mode && workMode === opp.work_mode) bonus += 10;
+    if (govLevel && opp.government_level && govLevel === opp.government_level) bonus += 15;
+
+    // If there's no keyword signal at all (e.g. user only picked selects),
+    // still let location/work-mode/government bonuses count, plus a small
+    // nod to the opportunity's own quality score so it isn't stuck at 0.
+    const qualityBlend = (opp.score || 0) * 0.15;
+    return Math.round(Math.min(100, keywordScore + bonus + qualityBlend));
+  }
+  window.OH_computeDnaScore = computeDnaScore;
+
+  // Short, human-readable reason a card matched — used for lightweight
+  // "why you're seeing this" annotations on personalized cards. Returns
+  // null when there's nothing worth saying (keeps things honest instead of
+  // forcing an explanation where there isn't a real match).
+  function explainDnaMatch(opp, dna) {
+    if (!dna || !Object.keys(dna).length) return null;
+    const words = [];
+    let workMode = null, govLevel = null;
+    Object.values(dna).forEach((fields) => {
+      if (!fields || typeof fields !== "object") return;
+      Object.keys(fields).forEach((fk) => {
+        const v = fields[fk];
+        if (typeof v !== "string" || !v) return;
+        if (fk === "work_mode") { workMode = v; return; }
+        if (fk === "government_level") { govLevel = v; return; }
+        words.push(...dnaTokenize(v));
+      });
+    });
+    const oppText = [opp.title, opp.body, opp.industries && opp.industries.name, opp.department].filter(Boolean).join(" ");
+    const oppWords = new Set(dnaTokenize(oppText));
+    const matched = [...new Set(words)].filter((w) => oppWords.has(w)).slice(0, 3);
+    const bits = [];
+    if (matched.length) bits.push(matched.join(", "));
+    if (workMode && opp.work_mode === workMode) bits.push(WORK_MODE_LABELS[workMode] || workMode);
+    if (govLevel && opp.government_level === govLevel) bits.push("your preferred government level");
+    if (!bits.length) return null;
+    return "Matches: " + bits.join(" · ");
+  }
+  window.OH_explainDnaMatch = explainDnaMatch;
 
   window.initOpportunitiesFeed = initOpportunitiesFeed;
 })();
