@@ -40,6 +40,15 @@
       government: "Government", market: "Market", business: "Business", technology: "Tech", other: "Signal",
     };
 
+    // Some scraped job-board descriptions embed raw HTML (e.g. "<div
+    // class=...><p>..."). Strip tags before showing it as plain text —
+    // otherwise the tags render literally instead of being invisible markup.
+    function stripTags(html) {
+      const div = document.createElement("div");
+      div.innerHTML = html || "";
+      return (div.textContent || div.innerText || "").replace(/\s+\n/g, "\n").trim();
+    }
+
     function scoreBadge(score) {
       const s = score || 0;
       const cls = s >= 70 ? "high" : s >= 40 ? "mid" : "low";
@@ -100,7 +109,7 @@
 
           <div class="detail-section">
             <div class="detail-section-label">Description</div>
-            <div class="detail-body">${escapeHtml(opp.body || "No description provided.")}</div>
+            <div class="detail-body">${escapeHtml(stripTags(opp.body) || "No description provided.")}</div>
           </div>
 
           ${opp.end_date ? `

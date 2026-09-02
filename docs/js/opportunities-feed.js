@@ -168,11 +168,17 @@ function parseSearchQuery(raw) {
     }
   }
 
+  function stripTags(html) {
+    const div = document.createElement("div");
+    div.innerHTML = html || "";
+    return (div.textContent || div.innerText || "").trim();
+  }
+
   function popupHtml(opp) {
     const link = opp.source_type === "user" && opp.posted_by
       ? `<a href="profile.html?id=${opp.posted_by}">view poster</a>`
       : `<a href="opportunity.html?id=${opp.id}">view details</a>`;
-    return `<b>${escapeHtml(oppLabel(opp))}</b>${escapeHtml((opp.body || "").slice(0, 140))}<br>${link}`;
+    return `<b>${escapeHtml(oppLabel(opp))}</b>${escapeHtml(stripTags(opp.body).slice(0, 140))}<br>${link}`;
   }
 
   function applyFilters() {
