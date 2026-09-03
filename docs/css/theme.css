@@ -207,7 +207,7 @@ a { color: var(--accent-strong); }
 }
 .leaflet-control-attribution a { color: var(--text-muted) !important; }
 
-.filter-bar { padding: 0.9rem; border-bottom: 1px solid var(--border); }
+.filter-bar { padding: 0.9rem; border-bottom: 1px solid var(--border); max-height: 42vh; overflow-y: auto; }
 .search-input {
   width: 100%; background: var(--surface-2); color: var(--text); border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
