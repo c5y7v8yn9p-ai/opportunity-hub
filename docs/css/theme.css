@@ -185,14 +185,14 @@ a { color: var(--accent-strong); }
 }
 
 .map-shell {
-  display: grid; grid-template-columns: 360px 1fr; gap: 0.6rem; height: 75vh;
+  display: grid; grid-template-columns: 360px 1fr; grid-template-rows: 1fr; gap: 0.6rem; height: 75vh;
   margin: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
 }
 .map-sidebar {
   border-right: 1px solid var(--border); background: var(--surface);
-  display: flex; flex-direction: column; overflow: hidden;
+  display: flex; flex-direction: column; overflow: hidden; min-height: 0;
 }
-.map-sidebar-scroll { overflow-y: auto; flex: 1; padding: 0.9rem; }
+.map-sidebar-scroll { overflow-y: auto; flex: 1; min-height: 0; padding: 0.9rem; }
 .map-pane { position: relative; background: var(--bg); }
 #leaflet-map { position: absolute; inset: 0; }
 .leaflet-container { background: var(--bg) !important; }
@@ -207,7 +207,7 @@ a { color: var(--accent-strong); }
 }
 .leaflet-control-attribution a { color: var(--text-muted) !important; }
 
-.filter-bar { padding: 0.9rem; border-bottom: 1px solid var(--border); max-height: 42vh; overflow-y: auto; }
+.filter-bar { padding: 0.9rem; border-bottom: 1px solid var(--border); max-height: 240px; overflow-y: auto; }
 .search-input {
   width: 100%; background: var(--surface-2); color: var(--text); border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -262,9 +262,10 @@ a { color: var(--accent-strong); }
 }
 
 @media (max-width: 860px) {
-  .map-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; min-height: auto; }
-  .map-sidebar { border-right: none; border-bottom: 1px solid var(--border); max-height: 46vh; }
-  .map-pane { height: 46vh; }
+  .map-shell { grid-template-columns: 1fr; grid-template-rows: auto auto; min-height: auto; height: auto; }
+  .map-sidebar { border-right: none; border-bottom: 1px solid var(--border); height: auto; max-height: none; }
+  .map-sidebar-scroll { height: 55vh; flex: none; }
+  .map-pane { height: 40vh; }
 }
 
 /* ---------- forms ---------- */
